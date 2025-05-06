@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI 聊天面板</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    
+    <!-- Tailwind CSS和daisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <!-- Highlight.js 用于代码高亮 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    
+    <!-- Marked.js 用于Markdown解析 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script>
+        // Tailwind配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'openai-sidebar': '#f7f7f8',
+                        'openai-hover': '#ececf1',
+                        'openai-border': '#e5e5e5',
+                        'openai-text': '#343541',
+                        'openai-gray': '#8e8ea0',
+                        'openai-green': '#10a37f',
+                        'openai-button': '#f9fafb',
+                    }
+                }
+            },
+            // 使用CDN版本的daisyUI
+            daisyui: {
+                themes: ["light", "dark"],
+            },
+        }
+    </script>
+</head>
+<body class="bg-white text-openai-text flex h-screen">
+    <!-- 左侧边栏 - 对话历史 -->
+    <aside class="w-64 bg-openai-sidebar border-r border-openai-border flex-shrink-0 flex flex-col h-full overflow-auto transition-all duration-300" id="sidebar">
+        <!-- 边栏头部 -->
+        <div class="p-4 border-b border-openai-border">
+            <button id="newChatBtn" class="bg-white text-openai-text hover:bg-openai-hover w-full py-2 px-3 rounded-md border border-openai-border flex items-center justify-between transition-all">
+                <span class="font-medium">新建对话</span>
+                <i class="fas fa-plus text-xs"></i>
+            </button>
+        </div>
+        
+        <!-- 对话历史列表 -->
+        <div class="flex-1 overflow-auto p-2">
+            <div class="text-sm font-medium text-openai-gray uppercase tracking-wider px-2 mb-2">对话历史</div>
+            <div id="conversationList" class="space-y-1">
+                <!-- 对话列表由JS填充 -->
+            </div>
+        </div>
+        
+        <!-- 边栏底部 -->
+        <div class="p-4 border-t border-openai-border">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-openai-green flex items-center justify-center text-white">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="text-sm font-medium">OpenAI 面板</div>
+                    <div class="text-xs text-openai-gray">v1.0.0</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 主内容区域 -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+        <!-- 顶部导航 -->
+        <header class="py-1 px-3 border-b border-openai-border flex items-center justify-between bg-white">
+            <!-- 模型选择 -->
+            <div class="dropdown dropdown-bottom">
+                <div tabindex="0" role="button" class="bg-openai-button hover:bg-openai-hover py-0.5 px-2 rounded-md border border-openai-border text-sm flex items-center gap-2 cursor-pointer">
+                    <span id="selectedModel">GPT-3.5</span>
+                    <i class="fas fa-chevron-down text-xs text-openai-gray"></i>
+                </div>
+                <ul tabindex="0" id="modelSelect" class="dropdown-content z-[1] menu p-2 shadow-lg bg-white rounded-md w-60 border border-openai-border">
+                    <!-- 模型列表由JS填充 -->
+                </ul>
+            </div>
+            
+            <!-- 右侧工具栏 -->
+            <div class="flex items-center gap-2">
+                <!-- 主题切换按钮 -->
+                <button id="themeBtn" class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray" title="切换主题">
+                    <i class="fas fa-moon text-sm"></i>
+                </button>
+                
+                <!-- 设置按钮 -->
+                <button id="settingsBtn" class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray" title="API设置">
+                    <i class="fas fa-cog text-sm"></i>
+                </button>
+                
+                <!-- 清除对话按钮 -->
+                <button id="clearChat" class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray" title="清除对话">
+                    <i class="fas fa-trash text-sm"></i>
+                </button>
+                
+                <!-- 移动端菜单按钮 -->
+                <button id="mobileMenuBtn" class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray md:hidden" title="菜单">
+                    <i class="fas fa-bars text-sm"></i>
+                </button>
+            </div>
+        </header>
+        
+        <!-- 聊天区域 -->
+        <div class="flex-1 overflow-hidden flex flex-col bg-white">
+            <!-- 消息区域 -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+            
+            <!-- 输入区域 -->
+            <div class="p-4 border-t border-openai-border bg-white">
+                <div class="max-w-3xl mx-auto">
+                    <div class="relative rounded-lg border border-openai-border shadow-sm focus-within:ring-1 focus-within:ring-openai-green focus-within:border-openai-green bg-white">
+                        <textarea 
+                            id="messageInput" 
+                            class="w-full p-3 pr-12 bg-transparent border-none focus:outline-none auto-resize"
+                            placeholder="发送消息..."
+                            rows="1"></textarea>
+                        
+                        <!-- 停止生成按钮 - 初始隐藏 -->
+                        <button id="stopButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-red-500 hidden">
+                            <i class="fas fa-stop text-sm"></i>
+                        </button>
+                        
+                        <!-- 发送按钮 -->
+                        <button id="sendButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray disabled:opacity-50">
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-center mt-2 text-openai-gray">
+                        AI 助手由 OpenAI API 提供支持。使用前请确保已设置正确的 API 密钥。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 模块化JS导入 -->
+    <script type="module">
+        import { SettingsManager } from './js/settings.js';
+        import { ApiService } from './js/api.js';
+        import { ChatUI } from './js/ui.js';
+        import { ChatMessageComponent } from './components/ChatMessage.js';
+        import { ConversationManager } from './js/conversation.js';
+        import { Toast } from './components/Toast.js';
+        import { HtmlPreview } from './components/HtmlPreview.js';
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化组件
+            const settingsManager = new SettingsManager();
+            const conversationManager = new ConversationManager();
+            const apiService = new ApiService(settingsManager, conversationManager);
+            
+            // 初始化全局Toast
+            window.toast = new Toast();
+            
+            // 初始化HTML预览
+            window.htmlPreview = new HtmlPreview();
+            
+            // 初始化聊天UI
+            const chatUI = new ChatUI(apiService, settingsManager, ChatMessageComponent, conversationManager);
+            chatUI.init();
+            
+            // 检查必要设置
+            if (!settingsManager.hasRequiredSettings()) {
+                // 如果未设置API密钥，显示设置弹窗
+                setTimeout(() => {
+                    chatUI.openSettingsModal();
+                }, 500);
+            }
+            
+            // 初始化主题切换
+            const themeBtn = document.getElementById('themeBtn');
+            themeBtn.addEventListener('click', function() {
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                
+                // 更新主题
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('selected_theme', newTheme);
+                
+                // 更新图标
+                const icon = themeBtn.querySelector('i');
+                if (newTheme === 'dark') {
+                    icon.classList.remove('fa-moon');
+                    icon.classList.add('fa-sun');
+                } else {
+                    icon.classList.remove('fa-sun');
+                    icon.classList.add('fa-moon');
+                }
+                
+                // 显示主题切换提示
+                window.toast.info(`已切换到${newTheme === 'dark' ? '暗色' : '亮色'}主题`);
+            });
+            
+            // 加载保存的主题
+            const savedTheme = localStorage.getItem('selected_theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                if (savedTheme === 'dark') {
+                    const icon = themeBtn.querySelector('i');
+                    icon.classList.remove('fa-moon');
+                    icon.classList.add('fa-sun');
+                }
+            }
+            
+            // 移动端菜单切换
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            
+            mobileMenuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+            
+            // 配置Marked.js
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true
+            });
+        });
+    </script>
+</body>
+</html> 
