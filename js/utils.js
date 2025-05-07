@@ -9,6 +9,9 @@ export class MessageFormatter {
         this.inlineCodePattern = /`([^`]+)`/g;
         this.toast = new Toast();
         this.htmlPreview = new HtmlPreview();
+        
+        // 图片链接匹配正则表达式
+        this.imagePattern = /!\[(.*?)\]\((https?:\/\/.*?\.(png|jpg|jpeg|gif|webp))\)/gi;
     }
     
     // 格式化消息
@@ -23,6 +26,11 @@ export class MessageFormatter {
                 // @ts-ignore
                 marked.setOptions({
                     highlight: function(code, lang) {
+                        // 对于HTML代码块，不进行转义
+                        if (lang === 'html' || lang === 'htm' || lang === 'xml') {
+                            return code;
+                        }
+                        
                         // @ts-ignore
                         if (lang && hljs && hljs.getLanguage(lang)) {
                             // @ts-ignore
@@ -56,6 +64,9 @@ export class MessageFormatter {
     
     // 基本文本格式化（不使用Markdown库时的后备方案）
     basicFormatting(message) {
+        // 处理图片链接
+        message = this.formatImageLinks(message);
+        
         // 处理代码块
         message = this.formatCodeBlocks(message);
         
@@ -68,11 +79,26 @@ export class MessageFormatter {
         return message;
     }
     
+    // 格式化图片链接
+    formatImageLinks(message) {
+        return message.replace(this.imagePattern, (match, altText, url) => {
+            return `<img src="${url}" alt="${altText || '图片'}" class="max-w-[520px]" loading="lazy">`;
+        });
+    }
+    
     // 格式化代码块
     formatCodeBlocks(message) {
         return message.replace(this.codeBlockPattern, (match, lang, code) => {
             const language = lang || 'plaintext';
-            const formattedCode = this.escapeHtml(code.trim());
+            
+            // 对于HTML类型的代码块，不转义内容
+            let formattedCode;
+            if (language.toLowerCase() === 'html' || language.toLowerCase() === 'htm' || language.toLowerCase() === 'xml') {
+                formattedCode = code.trim();
+            } else {
+                formattedCode = this.escapeHtml(code.trim());
+            }
+            
             const uniqueId = 'code-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
             
             // 处理HTML代码块，添加预览按钮
@@ -243,6 +269,22 @@ export class MessageFormatter {
         
         // 添加换行按钮功能
         this.addWrapButtonsToCodeBlocks();
+        
+        // 处理图片预览
+        this.setupImagePreviews();
+    }
+    
+    // 设置图片预览功能
+    setupImagePreviews() {
+        try {
+            // 检查全局ImageViewer实例是否存在
+            const imageViewer = window['imageViewer'];
+            if (imageViewer && typeof imageViewer.setupImagePreviews === 'function') {
+                imageViewer.setupImagePreviews();
+            }
+        } catch (e) {
+            console.error('设置图片预览功能失败:', e);
+        }
     }
     
     // 添加代码块复制按钮
@@ -250,9 +292,20 @@ export class MessageFormatter {
         document.querySelectorAll('.copy-button').forEach(button => {
             if (button.getAttribute('data-listener') === 'true') return; // 避免重复添加事件监听
             
-            button.setAttribute('data-listener', 'true');
-            button.addEventListener('click', () => {
-                const codeId = button.getAttribute('data-code-id');
+            // 克隆按钮并替换，以移除所有现有事件监听器
+            const newButton = button.cloneNode(true);
+            if (button.parentNode) {
+                button.parentNode.replaceChild(newButton, button);
+                newButton.setAttribute('data-listener', 'true');
+            } else {
+                button.setAttribute('data-listener', 'true');
+            }
+            
+            // 使用正确的按钮引用
+            const buttonToUse = button.parentNode ? newButton : button;
+            
+            buttonToUse.addEventListener('click', () => {
+                const codeId = buttonToUse.getAttribute('data-code-id');
                 const codeElement = document.getElementById(codeId);
                 
                 if (codeElement) {
@@ -265,13 +318,10 @@ export class MessageFormatter {
                         this.toast.success('代码已复制到剪贴板');
                         
                         // 添加按钮短暂的视觉反馈
-                        // @ts-ignore - 忽略HTMLElement的style类型检查
-                        const originalColor = button.style.color;
-                        // @ts-ignore - 忽略HTMLElement的style类型检查
-                        button.style.color = 'var(--openai-green, #10a37f)';
+                        const originalColor = buttonToUse.style.color || '';
+                        buttonToUse.style.color = 'var(--openai-green, #10a37f)';
                         setTimeout(() => {
-                            // @ts-ignore - 忽略HTMLElement的style类型检查
-                            button.style.color = originalColor;
+                            buttonToUse.style.color = originalColor;
                         }, 300);
                     }).catch(err => {
                         console.error('无法复制代码: ', err);
@@ -287,30 +337,31 @@ export class MessageFormatter {
         document.querySelectorAll('.preview-button').forEach(button => {
             if (button.getAttribute('data-listener') === 'true') return; // 避免重复添加事件监听
             
-            button.setAttribute('data-listener', 'true');
+            // 克隆按钮并替换，以移除所有现有事件监听器
+            const newButton = button.cloneNode(true);
+            if (button.parentNode) {
+                button.parentNode.replaceChild(newButton, button);
+                newButton.setAttribute('data-listener', 'true');
+            } else {
+                button.setAttribute('data-listener', 'true');
+            }
+            
+            // 使用正确的按钮引用
+            const buttonToUse = button.parentNode ? newButton : button;
             
             // 添加预览按钮样式
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.background = 'none';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.border = 'none';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.color = '#6366f1';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.cursor = 'pointer';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.fontSize = '0.75rem';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.padding = '0';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.display = 'flex';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.alignItems = 'center';
-            // @ts-ignore - 忽略HTMLElement的style类型检查
-            button.style.gap = '0.25rem';
+            buttonToUse.style.background = 'none';
+            buttonToUse.style.border = 'none';
+            buttonToUse.style.color = '#6366f1';
+            buttonToUse.style.cursor = 'pointer';
+            buttonToUse.style.fontSize = '0.75rem';
+            buttonToUse.style.padding = '0';
+            buttonToUse.style.display = 'flex';
+            buttonToUse.style.alignItems = 'center';
+            buttonToUse.style.gap = '0.25rem';
             
-            button.addEventListener('click', () => {
-                const codeId = button.getAttribute('data-code-id');
+            buttonToUse.addEventListener('click', () => {
+                const codeId = buttonToUse.getAttribute('data-code-id');
                 const codeElement = document.getElementById(codeId);
                 
                 if (codeElement) {
@@ -326,44 +377,68 @@ export class MessageFormatter {
     // 添加代码换行切换按钮
     addWrapButtonsToCodeBlocks() {
         // 查找所有换行按钮
-        const wrapButtons = document.querySelectorAll('.wrap-button');
-        
-        wrapButtons.forEach(button => {
-            if (!(button instanceof HTMLElement)) return;
+        document.querySelectorAll('.wrap-button').forEach(button => {
+            if (button.getAttribute('data-listener') === 'true') return; // 避免重复添加事件监听
             
-            // 移除现有事件监听器
-            button.replaceWith(button.cloneNode(true));
-            const newButton = document.querySelector(`.wrap-button[data-code-id="${button.dataset.codeId}"]`);
-            
-            if (newButton && newButton instanceof HTMLElement) {
-                newButton.addEventListener('click', () => {
-                    const codeId = newButton.dataset.codeId;
-                    const codeElement = document.getElementById(codeId);
-                    
-                    if (codeElement) {
-                        // 获取代码块容器
-                        const codeBlock = codeElement.closest('.code-block');
-                        
-                        if (codeBlock) {
-                            // 切换换行类
-                            codeBlock.classList.toggle('wrap-code');
-                            
-                            // 更新按钮状态
-                            const isWrapped = codeBlock.classList.contains('wrap-code');
-                            const btnText = newButton.querySelector('span');
-                            if (btnText) {
-                                btnText.textContent = isWrapped ? '不换行' : '换行';
-                            }
-                            
-                            // 更新图标
-                            const btnIcon = newButton.querySelector('i');
-                            if (btnIcon) {
-                                btnIcon.className = isWrapped ? 'fas fa-align-left' : 'fas fa-text-width';
-                            }
-                        }
-                    }
-                });
+            // 克隆按钮并替换，以移除所有现有事件监听器
+            const newButton = button.cloneNode(true);
+            if (button.parentNode) {
+                button.parentNode.replaceChild(newButton, button);
+                newButton.setAttribute('data-listener', 'true');
+            } else {
+                button.setAttribute('data-listener', 'true');
             }
+            
+            // 使用正确的按钮引用
+            const buttonToUse = button.parentNode ? newButton : button;
+            
+            buttonToUse.addEventListener('click', () => {
+                const codeId = buttonToUse.getAttribute('data-code-id');
+                const codeElement = document.getElementById(codeId);
+                
+                if (codeElement) {
+                    // 获取代码块容器
+                    const codeBlock = codeElement.closest('.code-block');
+                    
+                    if (codeBlock) {
+                        // 切换换行类
+                        const wasWrapped = codeBlock.classList.contains('wrap-code');
+                        codeBlock.classList.toggle('wrap-code');
+                        const isWrapped = codeBlock.classList.contains('wrap-code');
+                        
+                        console.log(`[代码块] 切换换行状态: ${wasWrapped ? '换行' : '不换行'} -> ${isWrapped ? '换行' : '不换行'}`);
+                        
+                        // 更新按钮状态
+                        const btnText = buttonToUse.querySelector('span');
+                        if (btnText) {
+                            btnText.textContent = isWrapped ? '不换行' : '换行';
+                            console.log(`[代码块] 更新按钮文本为: "${btnText.textContent}"`);
+                        }
+                        
+                        // 更新图标
+                        const btnIcon = buttonToUse.querySelector('i');
+                        if (btnIcon) {
+                            btnIcon.className = isWrapped ? 'fas fa-align-left' : 'fas fa-text-width';
+                        }
+                        
+                        // 触发滚动事件以确保水平滚动条正确显示
+                        setTimeout(() => {
+                            // 触发resize事件以确保UI正确更新
+                            window.dispatchEvent(new Event('resize'));
+                            
+                            // 重新应用代码高亮
+                            if (typeof hljs !== 'undefined') {
+                                try {
+                                    hljs.highlightElement(codeElement);
+                                    console.log(`[代码块] 重新应用代码高亮`);
+                                } catch (e) {
+                                    console.error('[代码块] 重新应用代码高亮失败:', e);
+                                }
+                            }
+                        }, 50);
+                    }
+                }
+            });
         });
     }
 } 

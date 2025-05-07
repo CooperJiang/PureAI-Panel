@@ -1,0 +1,165 @@
+/* 按钮和工具样式 */
+
+/* 停止生成按钮 */
+#stopButton {
+    display: none;
+    opacity: 0;
+}
+
+#stopButton.show {
+    display: inline-flex;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+/* 预览按钮 */
+.preview-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+}
+
+.preview-button:hover {
+    background-color: #e5e7eb;
+}
+
+[data-theme="dark"] .preview-button {
+    background-color: #343541;
+    color: #ececf1;
+}
+
+[data-theme="dark"] .preview-button:hover {
+    background-color: #40414f;
+}
+
+/* 源代码按钮 */
+.source-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+}
+
+.source-button:hover {
+    background-color: #e5e7eb;
+}
+
+[data-theme="dark"] .source-button {
+    background-color: #343541;
+    color: #ececf1;
+}
+
+[data-theme="dark"] .source-button:hover {
+    background-color: #40414f;
+}
+
+/* 刷新按钮 */
+.refresh-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+}
+
+.refresh-button:hover {
+    background-color: #e5e7eb;
+}
+
+[data-theme="dark"] .refresh-button {
+    background-color: #343541;
+    color: #ececf1;
+}
+
+[data-theme="dark"] .refresh-button:hover {
+    background-color: #40414f;
+}
+
+.preview-button,
+.source-button,
+.refresh-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    font-size: 0.875rem;
+    border: 1px solid #e5e7eb;
+}
+
+.preview-button:hover,
+.source-button:hover,
+.refresh-button:hover {
+    background-color: #e5e7eb;
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .preview-button,
+[data-theme="dark"] .source-button,
+[data-theme="dark"] .refresh-button {
+    background-color: #343541;
+    color: #ececf1;
+    border-color: #4e4f60;
+}
+
+[data-theme="dark"] .preview-button:hover,
+[data-theme="dark"] .source-button:hover,
+[data-theme="dark"] .refresh-button:hover {
+    background-color: #40414f;
+}
+
+.refresh-button:hover i {
+    animation: rotateAnimation 0.5s;
+}
+
+/* Toast通知 */
+.toast-item {
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .toast-item.bg-green-100 {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #ecfdf5;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .toast-item.bg-blue-100 {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #eff6ff;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .toast-item.bg-yellow-100 {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fffbeb;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .toast-item.bg-red-100 {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fee2e2;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+} 

@@ -20,7 +20,7 @@ export class ChatMessageComponent {
     
     static createUserMessage(content) {
         const messageElement = document.createElement('div');
-        messageElement.className = 'chat chat-end animate__animated animate__fadeIn';
+        messageElement.className = 'chat chat-end animate__animated animate__fadeIn group';
         messageElement.dataset.content = content;
         
         const timestamp = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
@@ -28,7 +28,9 @@ export class ChatMessageComponent {
         messageElement.innerHTML = `
             <div class="chat-row">
                 <div class="chat-bubble">
-                    ${this.formatter.formatMessage(content)}
+                    <div class="markdown-content text-sm leading-snug">
+                        ${this.formatter.formatMessage(content)}
+                    </div>
                 </div>
                 <div class="chat-image avatar flex items-center justify-center">
                     <div class="w-8 h-8 rounded-full bg-openai-green flex items-center justify-center overflow-hidden">
@@ -38,12 +40,15 @@ export class ChatMessageComponent {
             </div>
             <div class="flex items-center gap-1 text-openai-gray text-xs mt-1 ml-auto mr-11">
                 <span class="message-time">${timestamp}</span>
-                <div class="message-actions">
-                    <button class="edit-message-btn" title="编辑消息">
+                <div class="message-actions opacity-0 transition-opacity group-hover:opacity-100">
+                    <button class="edit-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="编辑消息">
                         <i class="fas fa-pencil-alt"></i>
                     </button>
-                    <button class="delete-message-btn" title="删除消息">
+                    <button class="delete-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="删除消息">
                         <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button class="copy-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="复制内容">
+                        <i class="fas fa-copy"></i>
                     </button>
                 </div>
             </div>
@@ -61,7 +66,7 @@ export class ChatMessageComponent {
     static createAssistantMessage(content, formatter = this.formatter, isStream = false) {
         const messageId = 'msg-' + Date.now();
         const messageElement = document.createElement('div');
-        messageElement.className = 'chat chat-start animate__animated animate__fadeIn';
+        messageElement.className = 'chat chat-start animate__animated animate__fadeIn group';
         messageElement.id = messageId;
         if (content) messageElement.dataset.content = content;
         
@@ -76,7 +81,7 @@ export class ChatMessageComponent {
                     </div>
                 </div>
                 <div class="chat-bubble">
-                    <div id="content-${messageId}" class="markdown-content">
+                    <div id="content-${messageId}" class="markdown-content text-sm leading-snug">
                         ${content ? this.formatter.formatMessage(content) : ''}
                         ${isStream ? '<span class="cursor-blink"></span>' : ''}
                     </div>
@@ -85,12 +90,15 @@ export class ChatMessageComponent {
             <div class="flex items-center gap-1 text-openai-gray text-xs mt-1 ml-11">
                 <span class="message-time">${timestamp}</span>
                 <span class="token-count" title="Token数量">${tokenCount > 0 ? `${tokenCount} tokens` : ''}</span>
-                <div class="message-actions">
-                    <button class="edit-message-btn" title="编辑回复">
+                <div class="message-actions opacity-0 transition-opacity group-hover:opacity-100">
+                    <button class="edit-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="编辑回复">
                         <i class="fas fa-pencil-alt"></i>
                     </button>
-                    <button class="delete-message-btn" title="删除回复">
+                    <button class="delete-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="删除回复">
                         <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button class="copy-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="复制内容">
+                        <i class="fas fa-copy"></i>
                     </button>
                 </div>
             </div>
@@ -176,17 +184,33 @@ export class ChatMessageComponent {
     
     // 估算Token数量 (简单估算，实际数量可能有差异)
     static estimateTokenCount(text) {
-        // 英文单词约等于每个单词0.75个token
-        // 中文字符约等于每个字符1.5个token
-        const english = text.match(/[a-zA-Z]+/g) || [];
-        const chinese = text.match(/[\u4e00-\u9fa5]/g) || [];
-        const englishTokens = english.join(' ').split(' ').length * 0.75;
-        const chineseTokens = chinese.length * 1.5;
+        if (!text) return 0;
         
-        // 加上符号、数字等其他字符，粗略估计每个0.25个token
-        const other = text.length - (english.join('').length + chinese.length);
-        const otherTokens = other * 0.25;
-        
-        return Math.round(englishTokens + chineseTokens + otherTokens);
+        try {
+            // 一个更精确的token估算算法
+            // 英文单词约等于每个单词0.75个token
+            // 中文字符约等于每个字符1.5个token
+            const english = (text.match(/[a-zA-Z]+/g) || []).join('').length;
+            const chinese = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const numbers = (text.match(/\d+/g) || []).join('').length;
+            const spaces = (text.match(/\s+/g) || []).join('').length;
+            const punctuation = text.length - english - chinese - numbers - spaces;
+            
+            // 估算token数量
+            const englishTokens = english * 0.25; // 英文字符
+            const chineseTokens = chinese * 1.5;  // 中文字符
+            const numberTokens = numbers * 0.25;  // 数字
+            const spaceTokens = spaces * 0.15;    // 空格
+            const punctTokens = punctuation * 0.5; // 标点和其他字符
+            
+            const totalTokens = Math.round(englishTokens + chineseTokens + numberTokens + spaceTokens + punctTokens);
+            console.log(`[TokenEstimation] 英文:${english}, 中文:${chinese}, 数字:${numbers}, 空格:${spaces}, 标点:${punctuation}, 总计:${totalTokens} tokens`);
+            
+            return totalTokens;
+        } catch (e) {
+            console.error('Token估算错误:', e);
+            // 备用方案 - 简单估算
+            return Math.round(text.length * 0.75);
+        }
     }
 } 

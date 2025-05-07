@@ -1,0 +1,52 @@
+/* 布局和响应式设计 */
+
+/* 头部样式 */
+header.py-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+header .h-8 {
+    height: 2rem;
+    width: auto;
+}
+
+header .dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* 移动端响应式设计 */
+@media (max-width: 768px) {
+    header button {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.875rem;
+    }
+    
+    .code-header {
+        flex-wrap: wrap;
+    }
+    
+    .code-header button {
+        padding: 0.25rem 0.375rem;
+        font-size: 0.75rem;
+    }
+    
+    .chat-input-container {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* 聊天输入区域 */
+.chat-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+} 

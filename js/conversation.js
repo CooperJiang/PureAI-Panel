@@ -129,12 +129,13 @@ export class ConversationManager {
     }
     
     // 向当前对话添加消息
-    addMessage(role, content) {
+    addMessage(role, content, metadata = '') {
         const conversation = this.getCurrentConversation();
         const message = {
             id: 'msg-' + Date.now(),
             role: role,
             content: content,
+            metadata: metadata,
             timestamp: new Date().toISOString()
         };
         
@@ -192,6 +193,90 @@ export class ConversationManager {
         conversation.messages = [];
         conversation.updatedAt = new Date().toISOString();
         this.saveConversations();
+    }
+    
+    /**
+     * 添加一对用户和助手消息到对话
+     * @param {string} userMessage - 用户消息内容
+     * @param {string} assistantMessage - 助手消息内容
+     * @returns {Array} 添加的消息对象数组
+     */
+    addMessagePair(userMessage, assistantMessage) {
+        const conversation = this.getCurrentConversation();
+        
+        // 添加用户消息
+        const userMsgObj = {
+            id: 'msg-' + Date.now(),
+            role: 'user',
+            content: userMessage,
+            timestamp: new Date().toISOString()
+        };
+        conversation.messages.push(userMsgObj);
+        
+        // 添加助手消息
+        const assistantMsgObj = {
+            id: 'msg-' + (Date.now() + 1),
+            role: 'assistant',
+            content: assistantMessage,
+            timestamp: new Date().toISOString()
+        };
+        conversation.messages.push(assistantMsgObj);
+        
+        // 更新对话时间戳
+        conversation.updatedAt = new Date().toISOString();
+        
+        // 自动更新对话标题（如果是第一条用户消息）
+        if (conversation.messages.filter(m => m.role === 'user').length === 1) {
+            // 使用用户的第一条消息作为对话标题（截取前20个字符）
+            let title = userMessage.trim().split('\n')[0];
+            if (title.length > 20) {
+                title = title.substring(0, 20) + '...';
+            }
+            conversation.title = title;
+        }
+        
+        this.saveConversations();
+        return [userMsgObj, assistantMsgObj];
+    }
+    
+    /**
+     * 更新消息对（用户消息和助手回复）
+     * @param {number} userIndex - 用户消息索引
+     * @param {number} assistantIndex - 助手消息索引
+     * @param {string} userContent - 用户消息新内容
+     * @param {string} assistantContent - 助手消息新内容
+     * @returns {boolean} 更新是否成功
+     */
+    updateMessagePair(userIndex, assistantIndex, userContent, assistantContent) {
+        const conversation = this.getCurrentConversation();
+        
+        if (!conversation || !conversation.messages) return false;
+        
+        // 验证索引有效性
+        if (userIndex < 0 || userIndex >= conversation.messages.length ||
+            assistantIndex < 0 || assistantIndex >= conversation.messages.length) {
+            console.error(`[ConversationManager] 无效的消息索引: ${userIndex}, ${assistantIndex}`);
+            return false;
+        }
+        
+        // 验证消息角色
+        if (conversation.messages[userIndex].role !== 'user' ||
+            conversation.messages[assistantIndex].role !== 'assistant') {
+            console.error(`[ConversationManager] 消息角色不匹配: ${userIndex}=${conversation.messages[userIndex].role}, ${assistantIndex}=${conversation.messages[assistantIndex].role}`);
+            return false;
+        }
+        
+        // 更新消息内容
+        conversation.messages[userIndex].content = userContent;
+        conversation.messages[assistantIndex].content = assistantContent;
+        
+        // 更新时间戳
+        conversation.updatedAt = new Date().toISOString();
+        conversation.messages[userIndex].timestamp = new Date().toISOString();
+        conversation.messages[assistantIndex].timestamp = new Date().toISOString();
+        
+        this.saveConversations();
+        return true;
     }
     
     // 获取所有对话（用于显示在侧边栏）

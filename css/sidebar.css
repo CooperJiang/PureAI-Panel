@@ -1,0 +1,171 @@
+/* 侧边栏样式 */
+
+/* 对话项操作按钮 */
+#conversationList .group .flex.opacity-0.group-hover\:opacity-100 {
+    opacity: 0;
+    visibility: hidden;
+    display: flex;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+#conversationList .group:hover .flex.opacity-0.group-hover\:opacity-100 {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+#conversationList .group .flex.opacity-0.group-hover\:opacity-100 button {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+#conversationList .group:hover .flex.opacity-0.group-hover\:opacity-100 button {
+    opacity: 1;
+    visibility: visible;
+}
+
+.conversation-item {
+    position: relative;
+    border-radius: 8px;
+    margin: 4px 0;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+}
+
+.conversation-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .conversation-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.conversation-item .delete-conversation-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.conversation-item:hover .delete-conversation-btn {
+    display: inline-flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.theme-item {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.theme-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.card {
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+#conversationList .group {
+    position: relative;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin: 0.25rem 0;
+    border: 1px solid transparent;
+}
+
+#conversationList .group:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    transform: translateX(2px);
+}
+
+[data-theme="dark"] #conversationList .group:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+#conversationList .group:active {
+    transform: scale(0.98);
+}
+
+.fa-thumbtack {
+    font-size: 0.75rem;
+    color: #666;
+    margin-right: 0.5rem;
+    transition: color 0.2s ease;
+}
+
+#conversationList .pinned-conversation {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-left: 2px solid #10a37f;
+}
+
+[data-theme="dark"] #conversationList .pinned-conversation {
+    background-color: rgba(16, 163, 127, 0.05);
+    border-left: 2px solid #10a37f;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: rgba(142, 142, 160, 0.3);
+    border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(142, 142, 160, 0.5);
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: -285px;
+        z-index: 50;
+        width: 280px;
+        overflow-y: auto;
+        transition: left 0.3s;
+        box-shadow: none;
+    }
+    
+    #sidebar.open {
+        left: 0;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+} 

@@ -102,12 +102,60 @@ export class HtmlPreview {
             const hasHtmlTag = /<html[^>]*>/i.test(htmlContent);
             const hasHeadTag = /<head[^>]*>/i.test(htmlContent);
             
+            // 确保HTML内容没有被转义
+            let processedContent = htmlContent;
+            
+            // 检查是否有被转义的标签 - 增强检测逻辑
+            const hasEscapedTags = processedContent.includes('&lt;') || 
+                                  processedContent.includes('&gt;') || 
+                                  processedContent.includes('&quot;') || 
+                                  processedContent.includes('&amp;');
+            
+            if (hasEscapedTags) {
+                // 多次解码以确保完全解码
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = processedContent;
+                processedContent = tempDiv.innerText;
+                
+                // 第二次检查和解码
+                if (processedContent.includes('&lt;') || processedContent.includes('&gt;')) {
+                    const deepTempDiv = document.createElement('div');
+                    deepTempDiv.innerHTML = processedContent;
+                    processedContent = deepTempDiv.innerText;
+                }
+                
+                console.log('[HTML预览] 检测到HTML被转义，已解码转义字符');
+                
+                // 二次检查HTML结构
+                if (/<html[^>]*>/i.test(processedContent)) {
+                    hasHtmlTag = true;
+                }
+                if (/<head[^>]*>/i.test(processedContent)) {
+                    hasHeadTag = true;
+                }
+            }
+            
+            // 检查是否包含HTML结构但被注释
+            if (!hasHtmlTag && processedContent.includes('<!-- <html')) {
+                processedContent = processedContent.replace(/<!-- (<html[^>]*>)/gi, '$1');
+                processedContent = processedContent.replace(/(<\/html>) -->/gi, '$1');
+                hasHtmlTag = true;
+                console.log('[HTML预览] 移除HTML标签的注释');
+            }
+            
+            if (!hasHeadTag && processedContent.includes('<!-- <head')) {
+                processedContent = processedContent.replace(/<!-- (<head[^>]*>)/gi, '$1');
+                processedContent = processedContent.replace(/(<\/head>) -->/gi, '$1');
+                hasHeadTag = true;
+                console.log('[HTML预览] 移除HEAD标签的注释');
+            }
+            
             if (hasHtmlTag && hasHeadTag) {
                 // 在head标签内添加base
-                return htmlContent.replace(/<head[^>]*>/i, match => `${match}${baseTag}`);
+                return processedContent.replace(/<head[^>]*>/i, match => `${match}${baseTag}`);
             } else if (hasHtmlTag) {
                 // 有html标签但没有head标签，添加head和base
-                return htmlContent.replace(/<html[^>]*>/i, match => `${match}<head>${baseTag}</head>`);
+                return processedContent.replace(/<html[^>]*>/i, match => `${match}<head>${baseTag}</head>`);
             } else {
                 // 只是HTML片段，构建完整结构
                 return `<!DOCTYPE html>
@@ -120,10 +168,16 @@ export class HtmlPreview {
         /* 内联基本样式以确保预览正常显示 */
         body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
         img { max-width: 100%; height: auto; }
+        code { font-family: monospace; background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
+        pre { background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
-    ${htmlContent}
+    ${processedContent}
 </body>
 </html>`;
             }

@@ -1,0 +1,67 @@
+/* 模型选择下拉菜单样式 */
+
+#modelSelect {
+    max-height: 300px;
+    overflow-y: auto;
+    width: 240px;
+}
+
+#modelSelect li a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    transition: background-color 0.2s;
+}
+
+#modelSelect li a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+#modelSelect li a .truncate {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-model-input {
+    padding: 0.5rem 1rem;
+}
+
+.custom-model-input input {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+}
+
+.custom-model-input button {
+    margin-top: 0.5rem;
+}
+
+#selectedModel {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.delete-model-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #ef4444;
+}
+
+li a:hover .delete-model-btn {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    #modelSelect {
+        width: 200px;
+    }
+    
+    #selectedModel {
+        max-width: 100px;
+    }
+} 

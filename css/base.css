@@ -1,0 +1,160 @@
+/* 基础样式 - 包含通用样式和工具类 */
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(142, 142, 160, 0.3);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(142, 142, 160, 0.5);
+}
+
+/* 自动调整文本区域高度 */
+.auto-resize {
+    resize: none;
+    overflow-y: hidden;
+    min-height: 40px;
+    transition: height 0.1s;
+}
+
+/* 流式响应的闪烁光标 */
+.cursor-blink {
+    display: inline-block;
+    width: 0.5rem;
+    height: 1.2rem;
+    background-color: #8e8ea0;
+    margin-left: 0.1rem;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    opacity: 0.7;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0; }
+}
+
+/* 动画过渡效果 */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.fade-out {
+    animation: fadeOut 0.3s ease-in-out;
+}
+
+.zoom-in {
+    animation: zoomIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes rotateAnimation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes scaleUpAnimation {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleDownAnimation {
+    from { transform: scale(1); opacity: 1; }
+    to { transform: scale(0.95); opacity: 0; }
+}
+
+.fa-spinner {
+    animation: rotateAnimation 1s linear infinite;
+}
+
+/* 代码样式 */
+code {
+    font-family: monospace;
+    font-size: 0.875em;
+}
+
+:not(pre) > code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] :not(pre) > code {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    pre, code {
+        font-size: 0.75rem;
+    }
+}
+
+/* 暗色模式基础样式 */
+[data-theme="dark"] {
+    color-scheme: dark;
+    --background-color: #343541;
+    --text-color: #ececf1;
+    --sidebar-bg: #202123;
+    --border-color: #4e4f60;
+}
+
+[data-theme="dark"] {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .bg-openai-sidebar {
+    background-color: var(--sidebar-bg);
+}
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-gray-100 {
+    background-color: var(--background-color);
+}
+
+[data-theme="dark"] .text-openai-text {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .text-openai-gray {
+    color: #acacbe;
+}
+
+[data-theme="dark"] .hover\:bg-openai-hover:hover,
+[data-theme="dark"] .hover\:bg-gray-100:hover,
+[data-theme="dark"] .hover\:bg-gray-50:hover {
+    background-color: #2a2b32;
+}
+
+[data-theme="dark"] .border-openai-border {
+    border-color: var(--border-color);
+} 

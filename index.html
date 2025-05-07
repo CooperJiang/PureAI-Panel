@@ -26,7 +26,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
     
     <!-- 自定义CSS -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/main.css">
     
     <script>
         // Tailwind配置
@@ -77,7 +77,7 @@
                     <i class="fas fa-robot"></i>
                 </div>
                 <div class="ml-2">
-                    <div class="text-sm font-medium">OpenAI 面板</div>
+                    <div class="text-sm font-medium">PureAI Panel</div>
                     <div class="text-xs text-openai-gray">v1.0.0</div>
                 </div>
             </div>
@@ -89,14 +89,14 @@
         <!-- 顶部导航 -->
         <header class="py-1 px-3 border-b border-openai-border flex items-center justify-between bg-white">
             <!-- 模型选择 -->
-            <div class="dropdown dropdown-bottom">
-                <div tabindex="0" role="button" class="bg-openai-button hover:bg-openai-hover py-0.5 px-2 rounded-md border border-openai-border text-sm flex items-center gap-2 cursor-pointer">
-                    <span id="selectedModel">GPT-3.5</span>
+            <div id="modelDropdown" class="relative inline-block">
+                <button id="modelDropdownButton" class="bg-openai-button hover:bg-openai-hover py-0.5 px-2 rounded-md border border-openai-border text-sm flex items-center gap-2 cursor-pointer">
+                    <span id="selectedModel">加载中...</span>
                     <i class="fas fa-chevron-down text-xs text-openai-gray"></i>
+                </button>
+                <div id="modelSelect" class="absolute left-0 top-full mt-1 bg-white shadow-lg rounded-md border border-openai-border w-64 z-10 hidden overflow-hidden">
+                    <!-- 这里将由ModelManager.js填充内容 -->
                 </div>
-                <ul tabindex="0" id="modelSelect" class="dropdown-content z-[1] menu p-2 shadow-lg bg-white rounded-md w-60 border border-openai-border">
-                    <!-- 模型列表由JS填充 -->
-                </ul>
             </div>
             
             <!-- 右侧工具栏 -->
@@ -134,9 +134,14 @@
                     <div class="relative rounded-lg border border-openai-border shadow-sm focus-within:ring-1 focus-within:ring-openai-green focus-within:border-openai-green bg-white">
                         <textarea 
                             id="messageInput" 
-                            class="w-full p-3 pr-12 bg-transparent border-none focus:outline-none auto-resize"
+                            class="w-full p-3 pr-12 bg-transparent border-none focus:outline-none auto-resize max-h-[200px]"
                             placeholder="发送消息..."
                             rows="1"></textarea>
+                        
+                        <!-- 发送状态提示（生成中） -->
+                        <div id="sendingIndicator" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md text-gray-400 hidden">
+                            <i class="fas fa-spinner fa-spin text-sm"></i>
+                        </div>
                         
                         <!-- 停止生成按钮 - 初始隐藏 -->
                         <button id="stopButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-red-500 hidden">
@@ -144,7 +149,7 @@
                         </button>
                         
                         <!-- 发送按钮 -->
-                        <button id="sendButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray disabled:opacity-50">
+                        <button id="sendButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="fas fa-paper-plane text-sm"></i>
                         </button>
                     </div>
@@ -159,19 +164,23 @@
     <!-- 模块化JS导入 -->
     <script type="module">
         import { SettingsManager } from './js/settings.js';
-        import { ApiService } from './js/api.js';
+        import { ApiClient } from './js/api.js';
         import { ChatUI } from './js/ui.js';
         import { ChatMessageComponent } from './components/ChatMessage.js';
         import { ConversationManager } from './js/conversation.js';
         import { Toast } from './components/Toast.js';
         import { HtmlPreview } from './components/HtmlPreview.js';
+        import { ImageViewer } from './components/ImageViewer.js';
         
         // 初始化应用
         document.addEventListener('DOMContentLoaded', () => {
             // 初始化组件
             const settingsManager = new SettingsManager();
             const conversationManager = new ConversationManager();
-            const apiService = new ApiService(settingsManager, conversationManager);
+            const apiClient = new ApiClient({
+                settingsManager: settingsManager,
+                conversationManager: conversationManager
+            });
             
             // 初始化全局Toast
             window.toast = new Toast();
@@ -179,9 +188,17 @@
             // 初始化HTML预览
             window.htmlPreview = new HtmlPreview();
             
+            // 初始化图片查看器
+            window.imageViewer = new ImageViewer();
+            
             // 初始化聊天UI
-            const chatUI = new ChatUI(apiService, settingsManager, ChatMessageComponent, conversationManager);
-            chatUI.init();
+            const chatUI = new ChatUI({
+                apiClient: apiClient,
+                settingsManager: settingsManager,
+                chatComponent: ChatMessageComponent,
+                conversationManager: conversationManager
+            });
+            window.chatUI = chatUI;
             
             // 检查必要设置
             if (!settingsManager.hasRequiredSettings()) {

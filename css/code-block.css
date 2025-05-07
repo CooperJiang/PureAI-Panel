@@ -1,0 +1,294 @@
+/* 代码块样式 */
+
+.code-block {
+    position: relative;
+    font-family: monospace;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    background-color: #f0f0f2;
+    overflow: hidden;
+    border: 1px solid #e0e0e3;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    min-width: 300px;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.code-block.wrap-code pre {
+    white-space: pre-wrap;
+}
+
+.code-block pre {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    counter-reset: line;
+    overflow-x: auto;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #2d3748;
+    background-color: transparent;
+    max-height: 500px; /* 默认限制高度 */
+    transition: max-height 0.3s ease;
+}
+
+/* 生成过程中的代码块样式 */
+.isGenerating .code-block pre {
+    max-height: none !important; /* 移除高度限制 */
+    overflow: visible !important;
+}
+
+.isGenerating .code-block {
+    max-height: none !important;
+    overflow: visible !important;
+    min-width: 80% !important; /* 增加最小宽度避免被挤压 */
+}
+
+/* 生成过程中隐藏代码块按钮，避免闪烁 */
+.isGenerating .code-header .flex {
+    opacity: 0;
+    visibility: hidden;
+    transition: none;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 1rem;
+    background-color: #e2e2e7;
+    color: #4a5568;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #d1d5db;
+}
+
+.code-header .left-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.code-header .right-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.wrap-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+    background-color: #edf2f7;
+    color: #4a5568;
+    transition: background-color 0.2s;
+}
+
+.wrap-button:hover {
+    background-color: #e2e8f0;
+}
+
+.copy-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+    background-color: #edf2f7;
+    color: #4a5568;
+    transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+    background-color: #e2e8f0;
+}
+
+/* 预览按钮 */
+.preview-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+    background-color: #3b82f6;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.preview-button:hover {
+    background-color: #2563eb;
+}
+
+/* 暗黑模式 */
+[data-theme="dark"] .code-block {
+    background-color: #444654;
+    border: 1px solid #4e4f60;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .markdown-content pre {
+    background-color: #444654;
+}
+
+[data-theme="dark"] .markdown-content pre code {
+    color: #ececf1;
+}
+
+[data-theme="dark"] .code-header {
+    background-color: #343541;
+    color: #ececf1;
+    border-bottom-color: #4e4f60;
+}
+
+[data-theme="dark"] .copy-button,
+[data-theme="dark"] .wrap-button {
+    background-color: #2a2b32;
+    color: #ececf1;
+}
+
+[data-theme="dark"] .copy-button:hover,
+[data-theme="dark"] .wrap-button:hover {
+    background-color: #40414f;
+}
+
+[data-theme="dark"] .preview-button {
+    background-color: #4f46e5;
+    color: white;
+}
+
+[data-theme="dark"] .copy-button:hover {
+    background-color: #40414f;
+}
+
+/* 代码高亮 */
+.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 0.5em;
+    background: transparent;
+    color: #2d3748;
+}
+
+.hljs-comment,
+.hljs-quote {
+    color: #718096;
+    font-style: italic;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula {
+    color: #d53f8c;
+}
+
+.hljs-section,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-deletion,
+.hljs-subst {
+    color: #2b6cb0;
+}
+
+.hljs-literal {
+    color: #0d6d8c;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-attribute,
+.hljs-meta-string {
+    color: #38a169;
+}
+
+.hljs-built_in,
+.hljs-class .hljs-title {
+    color: #6b46c1;
+}
+
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-number {
+    color: #c05621;
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-meta,
+.hljs-selector-id,
+.hljs-title {
+    color: #2b6cb0;
+}
+
+/* 暗黑模式代码高亮 */
+[data-theme="dark"] .hljs {
+    color: #ececf1;
+    background: transparent;
+}
+
+[data-theme="dark"] .hljs-comment,
+[data-theme="dark"] .hljs-quote {
+    color: #8b949e;
+    font-style: italic;
+}
+
+[data-theme="dark"] .hljs-doctag,
+[data-theme="dark"] .hljs-keyword,
+[data-theme="dark"] .hljs-formula {
+    color: #ff7b72;
+}
+
+[data-theme="dark"] .hljs-section,
+[data-theme="dark"] .hljs-name,
+[data-theme="dark"] .hljs-selector-tag,
+[data-theme="dark"] .hljs-deletion,
+[data-theme="dark"] .hljs-subst {
+    color: #79c0ff;
+}
+
+[data-theme="dark"] .hljs-literal {
+    color: #79c0ff;
+}
+
+[data-theme="dark"] .hljs-string,
+[data-theme="dark"] .hljs-regexp,
+[data-theme="dark"] .hljs-addition,
+[data-theme="dark"] .hljs-attribute,
+[data-theme="dark"] .hljs-meta-string {
+    color: #a5d6ff;
+}
+
+[data-theme="dark"] .hljs-built_in,
+[data-theme="dark"] .hljs-class .hljs-title {
+    color: #d2a8ff;
+}
+
+[data-theme="dark"] .hljs-attr,
+[data-theme="dark"] .hljs-variable,
+[data-theme="dark"] .hljs-template-variable,
+[data-theme="dark"] .hljs-type,
+[data-theme="dark"] .hljs-selector-class,
+[data-theme="dark"] .hljs-selector-attr,
+[data-theme="dark"] .hljs-selector-pseudo,
+[data-theme="dark"] .hljs-number {
+    color: #ffa657;
+}
+
+[data-theme="dark"] .hljs-symbol,
+[data-theme="dark"] .hljs-bullet,
+[data-theme="dark"] .hljs-link,
+[data-theme="dark"] .hljs-meta,
+[data-theme="dark"] .hljs-selector-id,
+[data-theme="dark"] .hljs-title {
+    color: #79c0ff;
+} 

@@ -1,0 +1,224 @@
+/* 聊天消息组件样式 */
+
+/* 聊天消息样式 */
+.chat {
+    position: relative;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-row {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* 用户消息 */
+.chat-end {
+    justify-content: flex-end;
+}
+
+.chat-end .chat-row {
+    flex-direction: row-reverse;
+}
+
+.chat-end .message-content {
+    background-color: #10a37f;
+    color: white;
+    border-radius: 0.75rem 0.75rem 0 0.75rem;
+    margin-right: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 助手消息 */
+.chat-start {
+    justify-content: flex-start;
+}
+
+.chat-start .message-content {
+    background-color: #f7f7f8;
+    color: #202123;
+    border-radius: 0.75rem 0.75rem 0.75rem 0;
+    margin-left: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .chat-start .message-content {
+    background-color: #444654;
+    color: #ececf1;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 头像样式 */
+.avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+/* 消息内容样式 */
+.message-content {
+    padding: 1rem 1.25rem;
+    border-radius: 0.75rem;
+    position: relative;
+    max-width: 90%;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* 消息操作按钮 */
+.message-actions {
+    display: none;
+    margin-top: 0.5rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.chat:hover .message-actions {
+    display: flex;
+}
+
+.message-actions:hover {
+    opacity: 1;
+}
+
+.message-actions button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-actions button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .message-actions button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.message-actions i {
+    font-size: 0.75rem;
+}
+
+/* 消息修改模式 */
+.chat.editing .message-content {
+    border: 1px dashed #10a37f;
+}
+
+/* 令牌计数器 */
+.token-count {
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+[data-theme="dark"] .token-count {
+    color: #9ca3af;
+}
+
+/* 输入框容器 */
+.chat-input-container {
+    display: flex;
+    position: relative;
+    background-color: #fff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-top: 1rem;
+}
+
+[data-theme="dark"] .chat-input-container {
+    background-color: #444654;
+    border-color: #4d4d5a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 光标动画 */
+.cursor-blink {
+    display: inline-block;
+    width: 0.5rem;
+    height: 1rem;
+    background-color: #10a37f;
+    animation: cursor-blink 1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 0.125rem;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+[data-theme="dark"] .cursor-blink {
+    background-color: #7dd3fc;
+}
+
+/* 错误消息 */
+.error-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    margin-left: 3rem;
+}
+
+/* 生成中的样式 */
+.isGenerating .chat-start .message-content {
+    border-left: 2px solid #10a37f;
+}
+
+[data-theme="dark"] .isGenerating .chat-start .message-content {
+    border-left: 2px solid #7dd3fc;
+}
+
+/* 消息加载占位符 */
+.message-placeholder {
+    height: 1.5rem;
+    width: 100%;
+    background-color: #f5f5f5;
+    border-radius: 0.25rem;
+    margin: 0.25rem 0;
+    animation: placeholder-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes placeholder-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+}
+
+[data-theme="dark"] .message-placeholder {
+    background-color: #2d2d3a;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .chat {
+        margin-bottom: 1.4rem;
+    }
+    
+    .chat-image {
+        max-width: 100%;
+    }
+    
+    .chat-bubble {
+        max-width: 85%;
+    }
+    
+    .message-actions {
+        flex-wrap: wrap;
+    }
+    
+    .message-content {
+        padding: 0.7rem 0.9rem;
+    }
+}
