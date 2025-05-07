@@ -14,9 +14,47 @@ export class MessageFormatter {
         this.imagePattern = /!\[(.*?)\]\((https?:\/\/.*?\.(png|jpg|jpeg|gif|webp))\)/gi;
     }
     
-    // 格式化消息
+    /**
+     * 格式化消息文本，应用Markdown和语法高亮
+     * @param {string} message - 原始消息内容
+     * @returns {string} - 格式化后的HTML
+     */
     formatMessage(message) {
         if (!message) return '';
+        
+        // 处理思考标签
+        if (message.includes('<think>') || message.includes('</think>')) {
+            // 提取并处理所有思考内容
+            const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+            message = message.replace(thinkRegex, (match, thinkContent) => {
+                // 处理思考内容（应用markdown但在思考容器中）
+                const formattedThinkContent = this._applyMarkdown(thinkContent);
+                return `<div class="think-container">${formattedThinkContent}</div>`;
+            });
+            
+            // 处理未闭合的思考标签
+            if (message.includes('<think>') && !message.includes('</think>')) {
+                const parts = message.split('<think>');
+                if (parts.length >= 2) {
+                    const beforeThink = this._applyMarkdown(parts[0]);
+                    const thinkContent = parts[1];
+                    return beforeThink + `<div class="think-container">${this._applyMarkdown(thinkContent)}</div>`;
+                }
+            }
+        }
+        
+        // 应用常规的Markdown处理
+        return this._applyMarkdown(message);
+    }
+    
+    /**
+     * 应用Markdown转换和代码高亮
+     * @param {string} text - 原始文本
+     * @returns {string} - 处理后的HTML
+     * @private
+     */
+    _applyMarkdown(text) {
+        if (!text) return '';
         
         // 如果有marked库可用，使用marked进行Markdown解析
         // @ts-ignore
@@ -45,20 +83,19 @@ export class MessageFormatter {
                 
                 // 使用marked解析Markdown
                 // @ts-ignore
-                let htmlContent = marked.parse(message);
+                let htmlContent = marked.parse(text);
                 
                 // 对代码块添加复制按钮
                 htmlContent = this.addCopyButtonsToMarkdown(htmlContent);
                 
                 return htmlContent;
             } catch (e) {
-                console.error('Markdown解析错误:', e);
                 // 如果解析失败，回退到基本格式化
-                return this.basicFormatting(message);
+                return this.basicFormatting(text);
             }
         } else {
             // 如果没有marked库，使用基本格式化
-            return this.basicFormatting(message);
+            return this.basicFormatting(text);
         }
     }
     
@@ -283,7 +320,6 @@ export class MessageFormatter {
                 imageViewer.setupImagePreviews();
             }
         } catch (e) {
-            console.error('设置图片预览功能失败:', e);
         }
     }
     
@@ -324,7 +360,6 @@ export class MessageFormatter {
                             buttonToUse.style.color = originalColor;
                         }, 300);
                     }).catch(err => {
-                        console.error('无法复制代码: ', err);
                         this.toast.error('复制失败，请重试');
                     });
                 }
@@ -406,13 +441,11 @@ export class MessageFormatter {
                         codeBlock.classList.toggle('wrap-code');
                         const isWrapped = codeBlock.classList.contains('wrap-code');
                         
-                        console.log(`[代码块] 切换换行状态: ${wasWrapped ? '换行' : '不换行'} -> ${isWrapped ? '换行' : '不换行'}`);
                         
                         // 更新按钮状态
                         const btnText = buttonToUse.querySelector('span');
                         if (btnText) {
                             btnText.textContent = isWrapped ? '不换行' : '换行';
-                            console.log(`[代码块] 更新按钮文本为: "${btnText.textContent}"`);
                         }
                         
                         // 更新图标
@@ -430,9 +463,7 @@ export class MessageFormatter {
                             if (typeof hljs !== 'undefined') {
                                 try {
                                     hljs.highlightElement(codeElement);
-                                    console.log(`[代码块] 重新应用代码高亮`);
                                 } catch (e) {
-                                    console.error('[代码块] 重新应用代码高亮失败:', e);
                                 }
                             }
                         }, 50);

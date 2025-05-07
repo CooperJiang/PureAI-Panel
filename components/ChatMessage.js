@@ -164,7 +164,6 @@ export class ChatMessageComponent {
                     // @ts-ignore
                     hljs.highlightElement(block);
                 } catch (e) {
-                    console.error('代码高亮失败:', e);
                 }
             });
         }
@@ -178,7 +177,6 @@ export class ChatMessageComponent {
                 }
             }, 100);
         } catch (e) {
-            console.error('应用HTML预览失败:', e);
         }
     }
     
@@ -204,11 +202,9 @@ export class ChatMessageComponent {
             const punctTokens = punctuation * 0.5; // 标点和其他字符
             
             const totalTokens = Math.round(englishTokens + chineseTokens + numberTokens + spaceTokens + punctTokens);
-            console.log(`[TokenEstimation] 英文:${english}, 中文:${chinese}, 数字:${numbers}, 空格:${spaces}, 标点:${punctuation}, 总计:${totalTokens} tokens`);
             
             return totalTokens;
         } catch (e) {
-            console.error('Token估算错误:', e);
             // 备用方案 - 简单估算
             return Math.round(text.length * 0.75);
         }

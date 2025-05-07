@@ -20,7 +20,6 @@ export class SettingsManager {
         // 特殊检查API密钥
         if (key === 'apiKey') {
             const value = this.settings[key];
-            console.log('[设置] API密钥检查:', value ? '已设置' : '未设置');
             return value || defaultValue;
         }
         

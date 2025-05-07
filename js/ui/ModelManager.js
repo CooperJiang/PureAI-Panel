@@ -11,7 +11,6 @@ export class ModelManager {
      */
     constructor(options) {
         if (!options.modelSelect) {
-            console.error('[ModelManager] 模型选择元素不存在');
             this.modelSelectContainer = document.createElement('div');
         } else {
             this.modelSelectContainer = options.modelSelect.parentElement || document.createElement('div');
@@ -63,19 +62,16 @@ export class ModelManager {
                 this.currentModel = this.builtInModels[0].id;
                 // 更新localStorage
                 localStorage.setItem('selected_model', this.currentModel);
-                console.log(`[ModelManager] 保存的模型ID不存在(${savedModel})，重置为默认模型: ${this.currentModel}`);
             }
         } else {
             // 如果没有已保存的模型或是无效值，使用默认模型
             this.currentModel = this.builtInModels[0].id;
             // 更新localStorage
             localStorage.setItem('selected_model', this.currentModel);
-            console.log(`[ModelManager] 无有效保存的模型(${savedModel})，使用默认模型: ${this.currentModel}`);
         }
         
         // 确保当前模型ID有效
         if (!this.currentModel || this.currentModel === 'undefined') {
-            console.warn('[ModelManager] 检测到无效的模型ID，重置为默认模型');
             this.currentModel = this.builtInModels[0].id;
             localStorage.setItem('selected_model', this.currentModel);
         }
@@ -91,7 +87,6 @@ export class ModelManager {
         
         // 获取当前模型名称（有效性验证后）确保日志显示正确
         const currentModelName = this.getModelNameById(this.currentModel);
-        console.log(`[ModelManager] 已初始化，当前选中模型ID: ${this.currentModel}, 名称: ${currentModelName}`);
     }
     
     /**
@@ -102,7 +97,6 @@ export class ModelManager {
         // 1. 首先尝试使用构造函数提供的引用
         if (this._originalSelectedModelText && this._originalSelectedModelText instanceof HTMLElement) {
             this.selectedModelText = this._originalSelectedModelText;
-            console.log('[ModelManager] 使用构造函数提供的selectedModelText引用');
             return;
         }
         
@@ -110,12 +104,10 @@ export class ModelManager {
         const domElement = document.getElementById('selectedModel');
         if (domElement) {
             this.selectedModelText = domElement;
-            console.log('[ModelManager] 通过DOM ID获取selectedModelText引用');
             return;
         }
         
         // 3. 如果上述方法都失败，记录错误
-        console.warn('[ModelManager] 无法初始化selectedModelText引用，显示可能不会更新');
     }
     
     /**
@@ -134,31 +126,27 @@ export class ModelManager {
                 // 创建下拉框触发按钮
                 const dropdownButton = document.createElement('button');
                 dropdownButton.id = 'modelDropdownButton';
-                dropdownButton.className = 'bg-openai-button hover:bg-openai-hover py-0.5 px-2 rounded-md border border-openai-border text-sm flex items-center gap-2 cursor-pointer transition-colors duration-150';
+                dropdownButton.className = 'flex items-center gap-2';
                 dropdownButton.innerHTML = `
-                    <span id="selectedModel">${this.truncateModelName(currentModelName)}</span>
-                    <i class="fas fa-chevron-down text-xs text-openai-gray transition-transform duration-150"></i>
+                    <span id="selectedModel" title="${currentModelName}">${this.truncateModelName(currentModelName)}</span>
+                    <i class="fas fa-chevron-down text-xs transition-transform duration-200"></i>
                 `;
                 this.modelSelectContainer.appendChild(dropdownButton);
                 
                 // 重新初始化selectedModelText引用
                 const newSelectedModelElement = dropdownButton.querySelector('#selectedModel');
                 if (newSelectedModelElement) {
-                    console.log('[ModelManager] 在创建下拉框时更新selectedModelText引用');
                     this.selectedModelText = newSelectedModelElement;
                     
                     // 确保标题属性也设置正确
                     this.selectedModelText.title = currentModelName;
                 } else {
-                    console.warn('[ModelManager] 创建下拉框后无法找到#selectedModel元素');
                 }
                 
                 // 创建下拉框内容容器 - 直接挂载到body
                 const dropdownContent = document.createElement('div');
                 dropdownContent.id = 'modelSelect';
-                dropdownContent.className = 'fixed bg-white shadow-lg rounded-md border border-openai-border w-60 hidden z-50 transition-opacity duration-150 opacity-0 divide-y divide-gray-100';
-                dropdownContent.style.maxHeight = '300px';
-                dropdownContent.style.overflowY = 'auto';
+                dropdownContent.className = 'fixed hidden z-50';
                 document.body.appendChild(dropdownContent);
                 this.dropdownContent = dropdownContent;
                 
@@ -196,100 +184,154 @@ export class ModelManager {
         // 清空下拉内容准备重新填充
         this.dropdownContent.innerHTML = '';
         
-        // 添加新模型按钮
-        const addModelButton = document.createElement('div');
-        addModelButton.className = 'p-2.5 border-b border-openai-border flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors duration-150';
-        addModelButton.innerHTML = `
-            <i class="fas fa-plus text-openai-green text-sm"></i>
-            <span class="text-sm">添加新模型</span>
+        // 添加样式
+        this.dropdownContent.classList.add('bg-white', 'dark:bg-gray-800', 'rounded-md', 'shadow-lg', 'border', 'border-gray-200', 'dark:border-gray-700', 'overflow-hidden', 'max-h-64', 'overflow-y-auto');
+        
+        // 添加头部
+        const header = document.createElement('div');
+        header.className = 'px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between';
+        header.innerHTML = `
+            <span class="font-medium text-gray-700 dark:text-gray-300">选择模型</span>
+            <button class="add-model-btn" title="添加自定义模型">
+                <i class="fas fa-plus text-xs"></i>
+            </button>
         `;
-        this.dropdownContent.appendChild(addModelButton);
+        this.dropdownContent.appendChild(header);
         
-        // 绑定添加模型按钮事件
-        addModelButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.showAddModelModal();
-        });
+        // 添加内置模型部分
+        const builtInSection = document.createElement('div');
+        builtInSection.className = 'py-1';
         
-        // 创建模型列表容器
-        const modelsContainer = document.createElement('div');
-        modelsContainer.className = 'max-h-52 overflow-y-auto';
-        this.dropdownContent.appendChild(modelsContainer);
-        
-        // 添加内置模型标题
         const builtInTitle = document.createElement('div');
-        builtInTitle.className = 'px-2.5 py-1.5 text-xs font-medium text-gray-500 bg-gray-50';
+        builtInTitle.className = 'px-4 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider';
         builtInTitle.textContent = '内置模型';
-        modelsContainer.appendChild(builtInTitle);
+        builtInSection.appendChild(builtInTitle);
         
         // 添加内置模型
         this.builtInModels.forEach(model => {
-            this.addModelOptionToDropdown(model, false, modelsContainer);
+            const isSelected = model.id === this.currentModel;
+            const modelItem = document.createElement('div');
+            modelItem.className = `px-4 py-2 cursor-pointer flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
+            modelItem.dataset.modelId = model.id;
+            modelItem.dataset.modelName = model.name;
+            modelItem.innerHTML = `
+                <span class="model-name flex-1 truncate" title="${model.name}">${model.name}</span>
+                ${isSelected ? '<i class="fas fa-check ml-2 text-blue-600 dark:text-blue-400"></i>' : ''}
+            `;
+            
+            // 添加点击事件
+            modelItem.addEventListener('click', () => {
+                this.selectModel(model.id, model.name);
+                this.closeDropdown();
+            });
+            
+            builtInSection.appendChild(modelItem);
         });
         
-        // 添加自定义模型
+        this.dropdownContent.appendChild(builtInSection);
+        
+        // 添加自定义模型部分
         const customModels = this.getCustomModels();
         if (customModels.length > 0) {
-            // 添加自定义模型标题
+            const customSection = document.createElement('div');
+            customSection.className = 'py-1 border-t border-gray-200 dark:border-gray-700';
+            
             const customTitle = document.createElement('div');
-            customTitle.className = 'px-2.5 py-1.5 text-xs font-medium text-gray-500 bg-gray-50 border-t border-gray-100';
+            customTitle.className = 'px-4 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider';
             customTitle.textContent = '自定义模型';
-            modelsContainer.appendChild(customTitle);
+            customSection.appendChild(customTitle);
             
-            // 添加自定义模型选项
+            // 添加自定义模型
             customModels.forEach(model => {
-                this.addModelOptionToDropdown(model, true, modelsContainer);
+                const isSelected = model.id === this.currentModel;
+                const modelItem = document.createElement('div');
+                modelItem.className = `px-4 py-2 cursor-pointer flex items-center justify-between group ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
+                modelItem.dataset.modelId = model.id;
+                modelItem.dataset.modelName = model.name;
+                modelItem.innerHTML = `
+                    <span class="model-name flex-1 truncate" title="${model.name}">${model.name}</span>
+                    <div class="flex items-center">
+                        ${isSelected ? '<i class="fas fa-check mr-2 text-blue-600 dark:text-blue-400"></i>' : ''}
+                        <button class="delete-btn p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" title="删除模型">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // 添加点击事件
+                modelItem.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-btn')) {
+                        // 删除按钮点击事件
+                        e.stopPropagation();
+                        this.removeCustomModel(model.id);
+                        modelItem.remove();
+                        
+                        // 如果删除的是当前选中的模型，切换到默认模型
+                        if (model.id === this.currentModel) {
+                            this.selectModel(this.builtInModels[0].id, this.builtInModels[0].name);
+                        }
+                        
+                        // 如果没有自定义模型了，移除整个部分
+                        if (this.getCustomModels().length === 0) {
+                            customSection.remove();
+                        }
+                    } else {
+                        // 模型项点击选择模型
+                        this.selectModel(model.id, model.name);
+                        this.closeDropdown();
+                    }
+                });
+                
+                customSection.appendChild(modelItem);
             });
-        }
-    }
-    
-    /**
-     * 添加模型选项到下拉框
-     * @param {Object} model - 模型对象
-     * @param {boolean} isCustom - 是否是自定义模型
-     * @param {HTMLElement} container - 容器元素
-     */
-    addModelOptionToDropdown(model, isCustom, container) {
-        const option = document.createElement('div');
-        option.className = 'px-2.5 py-2 hover:bg-gray-50 cursor-pointer transition-colors duration-150';
-        option.dataset.modelId = model.id;
-        
-        if (model.id === this.currentModel) {
-            option.classList.add('bg-blue-50', 'font-medium');
-        }
-        
-        const contentContainer = document.createElement('div');
-        contentContainer.className = 'flex justify-between items-center';
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'truncate text-sm';
-        nameSpan.textContent = model.name;
-        nameSpan.title = model.name;
-        contentContainer.appendChild(nameSpan);
-        
-        if (isCustom) {
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 transition-colors duration-150';
-            deleteBtn.title = '删除模型';
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt text-xs"></i>';
             
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.removeCustomModel(model.id);
-            });
-            
-            contentContainer.appendChild(deleteBtn);
+            this.dropdownContent.appendChild(customSection);
         }
         
-        option.appendChild(contentContainer);
+        // 添加输入框部分
+        const addModelSection = document.createElement('div');
+        addModelSection.className = 'px-4 py-2 border-t border-gray-200 dark:border-gray-700';
+        addModelSection.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <input type="text" placeholder="输入新模型ID" class="new-model-input flex-1 text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <button class="add-model-btn-input">添加</button>
+            </div>
+        `;
         
-        option.addEventListener('click', () => {
-            if (!option.querySelector('button:hover')) {
-                this.selectModel(model.id, model.name);
+        // 添加新建模型事件
+        const addModelBtn = addModelSection.querySelector('.add-model-btn-input');
+        const modelInput = addModelSection.querySelector('.new-model-input');
+        
+        // 提交表单处理函数
+        const submitNewModel = () => {
+            const value = modelInput.value.trim();
+            if (value) {
+                this.addCustomModel(value);
+                this.createCustomDropdown(); // 重新创建下拉框
+                modelInput.value = ''; // 清空输入框
+            }
+        };
+        
+        // 按钮点击添加
+        addModelBtn.addEventListener('click', submitNewModel);
+        
+        // 回车键添加
+        modelInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitNewModel();
             }
         });
         
-        (container || this.dropdownContent).appendChild(option);
+        this.dropdownContent.appendChild(addModelSection);
+        
+        // 添加全局点击按钮到头部 - 点击打开窗口或聚焦输入框
+        const headerAddBtn = header.querySelector('.add-model-btn');
+        headerAddBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 聚焦到新模型输入框
+            modelInput.focus();
+        });
     }
     
     /**
@@ -508,7 +550,6 @@ export class ModelManager {
     selectModel(modelId, modelName) {
         // 验证参数有效性
         if (!modelId) {
-            console.error('[ModelManager] 无效的模型ID，无法选择模型');
             return;
         }
         
@@ -528,7 +569,6 @@ export class ModelManager {
         if (displayElement) {
             displayElement.textContent = this.truncateModelName(modelName);
             displayElement.title = modelName;
-            console.log(`[ModelManager] 已直接更新DOM显示: ${modelName} (ID: ${this.currentModel})`);
         }
         
         // 同时更新内部引用
@@ -576,13 +616,11 @@ export class ModelManager {
     updateSelectedModelDisplay() {
         // 尝试重新获取selectedModelText元素（如果它不存在）
         if (!this.selectedModelText) {
-            console.log('[ModelManager] 尝试重新获取selectedModelText元素');
             this.selectedModelText = document.getElementById('selectedModel');
         }
         
         // 确保当前模型有效
         if (!this.currentModel || this.currentModel === 'undefined') {
-            console.warn('[ModelManager] updateSelectedModelDisplay: 检测到无效的当前模型，重置为默认模型');
             this.currentModel = this.builtInModels[0].id;
             localStorage.setItem('selected_model', this.currentModel);
         }
@@ -595,7 +633,6 @@ export class ModelManager {
         if (directElement) {
             directElement.textContent = this.truncateModelName(modelName);
             directElement.title = modelName;
-            console.log(`[ModelManager] 直接从DOM更新显示: ${modelName} (ID: ${this.currentModel})`);
         }
         
         // 同时更新缓存的引用（如果存在）
@@ -606,9 +643,7 @@ export class ModelManager {
             // 添加标题属性，鼠标悬停时显示完整名称
             this.selectedModelText.title = modelName;
             
-            console.log(`[ModelManager] 已通过缓存引用更新显示: ${modelName} (ID: ${this.currentModel})`);
         } else {
-            console.warn('[ModelManager] 无法更新显示: selectedModelText引用不存在');
         }
     }
     
@@ -719,7 +754,6 @@ export class ModelManager {
                 return JSON.parse(savedCustomModels);
             }
         } catch (e) {
-            console.error('解析自定义模型失败:', e);
         }
         return [];
     }
@@ -732,13 +766,11 @@ export class ModelManager {
     getModelNameById(modelId) {
         // 如果ID为空、undefined或字符串'undefined'，返回默认模型名称
         if (!modelId || modelId === 'undefined') {
-            console.warn(`[ModelManager] 尝试获取无效的模型ID: ${modelId}，使用默认模型`);
             
             // 同时修正currentModel
             if (this.currentModel === modelId || !this.currentModel) {
                 this.currentModel = this.builtInModels[0].id;
                 localStorage.setItem('selected_model', this.currentModel);
-                console.log(`[ModelManager] 修正当前模型为: ${this.currentModel}`);
             }
             
             return this.builtInModels[0].name;
@@ -754,13 +786,11 @@ export class ModelManager {
         if (customModel) return customModel.name;
         
         // 如果未找到，记录警告并返回默认模型名称
-        console.warn(`[ModelManager] 未找到模型ID对应的名称: ${modelId}，使用默认模型名称`);
         
         // 同时修正currentModel
         if (this.currentModel === modelId) {
             this.currentModel = this.builtInModels[0].id;
             localStorage.setItem('selected_model', this.currentModel);
-            console.log(`[ModelManager] 修正未知模型ID，重置为默认模型: ${this.currentModel}`);
         }
         
         return this.builtInModels[0].name;
@@ -773,7 +803,6 @@ export class ModelManager {
     getCurrentModelId() {
         // 确保当前模型有效
         if (!this.currentModel || this.currentModel === 'undefined') {
-            console.warn('[ModelManager] getCurrentModelId: 检测到无效的模型ID，重置为默认模型');
             this.currentModel = this.builtInModels[0].id;
             localStorage.setItem('selected_model', this.currentModel);
         }
@@ -783,7 +812,6 @@ export class ModelManager {
         const modelExists = allModels.some(model => model.id === this.currentModel);
         
         if (!modelExists) {
-            console.warn(`[ModelManager] getCurrentModelId: 当前模型ID(${this.currentModel})不在有效列表中，重置为默认模型`);
             this.currentModel = this.builtInModels[0].id;
             localStorage.setItem('selected_model', this.currentModel);
         }

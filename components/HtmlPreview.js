@@ -1,687 +1,390 @@
-// HTML预览组件
+/**
+ * HTML预览组件 - 负责处理HTML代码的预览功能
+ */
 export class HtmlPreview {
     constructor() {
-        this.previewModal = null;
-        this.currentHtmlCode = null;
-        this.createPreviewModal();
-        this.iframeCount = 0; // 用于创建不同名称的iframe，避免变量冲突
-        this.lastUpdateTime = {}; // 记录每个iframe最后更新时间
-        this.updateThrottleInterval = 5000; // 节流时间间隔，单位毫秒
-        this.pendingUpdates = {}; // 等待更新的内容
-        this.pendingTimeouts = {}; // 待更新的定时器
-        this.isUpdating = {}; // 记录各预览是否正在更新中
+        this.previewContainer = null;
+        this.currentHtml = '';
+        this.isShowing = false;
+        this.isFullscreen = false;
         
-        // 获取当前页面的基础URL，用于解决相对路径问题
-        this.baseUrl = window.location.origin;
+        // 创建预览容器
+        this.createPreviewContainer();
         
-        // 默认设置为不自动预览（在AI回复过程中不启用预览）
-        this.autoPreviewEnabled = false;
+        // 绑定关闭事件
+        this.bindEvents();
+        
     }
     
-    // 设置是否启用自动预览（流式回复中）
-    setAutoPreview(enabled) {
-        this.autoPreviewEnabled = enabled;
-    }
-    
-    // 创建预览模态框
-    createPreviewModal() {
-        // 检查是否已存在
-        if (document.getElementById('html-preview-modal')) {
-            this.previewModal = document.getElementById('html-preview-modal');
-            return;
+    /**
+     * 创建HTML预览容器
+     */
+    createPreviewContainer() {
+        // 首先检查并移除可能存在的旧容器
+        const existingContainer = document.getElementById('html-preview-container');
+        if (existingContainer) {
+            try {
+                existingContainer.remove();
+            } catch (error) {
+        }
         }
         
-        // 创建模态框容器
-        this.previewModal = document.createElement('div');
-        this.previewModal.id = 'html-preview-modal';
-        this.previewModal.className = 'fixed inset-0 z-50 hidden';
-        
-        // 模态框内容
-        this.previewModal.innerHTML = `
-            <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl flex flex-col h-[80vh]">
-                    <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
-                        <div class="text-lg font-medium">HTML 预览</div>
-                        <div class="flex gap-2">
-                            <button id="html-preview-fullscreen" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 text-sm" title="全屏预览">
-                                <i class="fas fa-expand text-gray-600 dark:text-gray-300"></i>
-                                <span class="hidden sm:inline">全屏</span>
+        try {
+            // 创建新的预览容器
+            this.previewContainer = document.createElement('div');
+            this.previewContainer.id = 'html-preview-container';
+            this.previewContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 hidden';
+            
+            // 创建预览内容
+            this.previewContainer.innerHTML = `
+                <div class="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+                    <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">HTML预览</h3>
+                        <div class="flex space-x-2">
+                            <button id="fullscreen-preview-btn" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                                </svg>
                             </button>
-                            <button id="html-preview-refresh" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 text-sm" title="刷新预览">
-                                <i class="fas fa-sync-alt text-gray-600 dark:text-gray-300"></i>
-                                <span class="hidden sm:inline">刷新</span>
+                            <button id="refresh-preview-btn" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
                             </button>
-                            <button id="html-preview-close" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1 text-sm" title="关闭预览">
-                                <i class="fas fa-times text-gray-600 dark:text-gray-300"></i>
-                                <span class="hidden sm:inline">关闭</span>
+                            <button id="close-preview-btn" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
                     </div>
-                    <div class="flex-1 p-4 overflow-auto relative bg-gray-50 dark:bg-gray-900" id="iframe-container">
-                        <iframe id="html-preview-frame" class="w-full h-full bg-white border-0 rounded shadow"></iframe>
+                    <div class="overflow-auto p-4 flex-grow" style="background-color: white;">
+                        <iframe id="html-preview-frame" class="w-full h-full border-0 dark:bg-white" style="min-height: 400px;"></iframe>
                     </div>
+                    <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                        完整HTML预览：支持所有功能和外部资源访问。
                 </div>
             </div>
         `;
         
-        document.body.appendChild(this.previewModal);
-        
-        // 添加事件监听
-        document.getElementById('html-preview-close').addEventListener('click', () => {
-            this.hidePreview();
-        });
-        
-        document.getElementById('html-preview-refresh').addEventListener('click', () => {
-            this.refreshPreview();
-        });
-        
-        document.getElementById('html-preview-fullscreen').addEventListener('click', () => {
-            this.toggleFullscreen();
-        });
-        
-        // 点击背景关闭
-        this.previewModal.addEventListener('click', (e) => {
-            if (e.target === this.previewModal.querySelector('.absolute')) {
-                this.hidePreview();
-            }
-        });
+            // 添加到body
+            document.body.appendChild(this.previewContainer);
+        } catch (error) {
+        }
     }
     
-    // 处理HTML内容，修复资源路径问题
-    processHtmlContent(htmlContent) {
-        // 如果HTML内容为空，返回空字符串
-        if (!htmlContent || htmlContent.trim() === '') {
-            return '';
+    /**
+     * 绑定关闭和刷新事件
+     */
+    bindEvents() {
+        if (!this.previewContainer) {
+            return;
         }
         
         try {
-            // 添加base标签解决相对路径问题
-            const baseTag = `<base href="${this.baseUrl}/">`;
-            
-            // 检查HTML是否包含完整的结构
-            const hasHtmlTag = /<html[^>]*>/i.test(htmlContent);
-            const hasHeadTag = /<head[^>]*>/i.test(htmlContent);
-            
-            // 确保HTML内容没有被转义
-            let processedContent = htmlContent;
-            
-            // 检查是否有被转义的标签 - 增强检测逻辑
-            const hasEscapedTags = processedContent.includes('&lt;') || 
-                                  processedContent.includes('&gt;') || 
-                                  processedContent.includes('&quot;') || 
-                                  processedContent.includes('&amp;');
-            
-            if (hasEscapedTags) {
-                // 多次解码以确保完全解码
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = processedContent;
-                processedContent = tempDiv.innerText;
-                
-                // 第二次检查和解码
-                if (processedContent.includes('&lt;') || processedContent.includes('&gt;')) {
-                    const deepTempDiv = document.createElement('div');
-                    deepTempDiv.innerHTML = processedContent;
-                    processedContent = deepTempDiv.innerText;
-                }
-                
-                console.log('[HTML预览] 检测到HTML被转义，已解码转义字符');
-                
-                // 二次检查HTML结构
-                if (/<html[^>]*>/i.test(processedContent)) {
-                    hasHtmlTag = true;
-                }
-                if (/<head[^>]*>/i.test(processedContent)) {
-                    hasHeadTag = true;
+            // 重新选择预览容器，以防初始化时没有成功捕获
+            if (!this.previewContainer) {
+                this.previewContainer = document.getElementById('html-preview-container');
+                if (!this.previewContainer) {
+                    return;
                 }
             }
             
-            // 检查是否包含HTML结构但被注释
-            if (!hasHtmlTag && processedContent.includes('<!-- <html')) {
-                processedContent = processedContent.replace(/<!-- (<html[^>]*>)/gi, '$1');
-                processedContent = processedContent.replace(/(<\/html>) -->/gi, '$1');
-                hasHtmlTag = true;
-                console.log('[HTML预览] 移除HTML标签的注释');
-            }
-            
-            if (!hasHeadTag && processedContent.includes('<!-- <head')) {
-                processedContent = processedContent.replace(/<!-- (<head[^>]*>)/gi, '$1');
-                processedContent = processedContent.replace(/(<\/head>) -->/gi, '$1');
-                hasHeadTag = true;
-                console.log('[HTML预览] 移除HEAD标签的注释');
-            }
-            
-            if (hasHtmlTag && hasHeadTag) {
-                // 在head标签内添加base
-                return processedContent.replace(/<head[^>]*>/i, match => `${match}${baseTag}`);
-            } else if (hasHtmlTag) {
-                // 有html标签但没有head标签，添加head和base
-                return processedContent.replace(/<html[^>]*>/i, match => `${match}<head>${baseTag}</head>`);
+            // 绑定关闭按钮
+            const closeBtn = document.getElementById('close-preview-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.closePreview());
             } else {
-                // 只是HTML片段，构建完整结构
-                return `<!DOCTYPE html>
-<html>
-<head>
-    ${baseTag}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        /* 内联基本样式以确保预览正常显示 */
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
-        img { max-width: 100%; height: auto; }
-        code { font-family: monospace; background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
-        pre { background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        table { border-collapse: collapse; width: 100%; }
-        table, th, td { border: 1px solid #ddd; }
-        th, td { padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
-</head>
-<body>
-    ${processedContent}
-</body>
-</html>`;
-            }
-        } catch (e) {
-            console.error('处理HTML内容时出错:', e);
-            return htmlContent; // 发生错误时返回原始内容
-        }
-    }
-    
-    // 显示HTML预览
-    showPreview(htmlCode) {
-        if (!this.previewModal) {
-            this.createPreviewModal();
-        }
-        
-        // 保存当前的HTML代码
-        this.currentHtmlCode = htmlCode;
-        
-        // 创建一个新的iframe来避免JavaScript变量重复声明问题
-        this.iframeCount++;
-        const iframeContainer = document.getElementById('iframe-container');
-        const oldIframe = document.getElementById('html-preview-frame');
-        if (oldIframe) {
-            oldIframe.remove();
-        }
-        
-        const newIframe = document.createElement('iframe');
-        newIframe.id = 'html-preview-frame';
-        newIframe.className = 'w-full h-full bg-white border-0 rounded shadow';
-        iframeContainer.appendChild(newIframe);
-        
-        // 处理HTML内容，修复资源路径问题
-        const processedHtmlCode = this.processHtmlContent(htmlCode);
-        
-        // 使用srcdoc属性设置iframe内容，而不是通过document.write
-        newIframe.srcdoc = processedHtmlCode;
-        
-        // 显示模态框
-        this.previewModal.classList.remove('hidden');
-    }
-    
-    // 刷新预览
-    refreshPreview() {
-        if (this.currentHtmlCode) {
-            // 直接创建新iframe并加载内容，而不是重用旧iframe
-            this.showPreview(this.currentHtmlCode);
-        }
-    }
-    
-    // 隐藏预览
-    hidePreview() {
-        if (this.previewModal) {
-            this.previewModal.classList.add('hidden');
-            
-            // 清理iframe内容以释放资源
-            const iframe = document.getElementById('html-preview-frame');
-            if (iframe) {
-                // @ts-ignore - HTMLIFrameElement确实有srcdoc属性
-                iframe.srcdoc = '';
-            }
-        }
-    }
-    
-    // 切换全屏显示
-    toggleFullscreen() {
-        const previewContainer = this.previewModal.querySelector('.bg-white.dark\\:bg-gray-800') || 
-                                 this.previewModal.querySelector('.max-w-4xl');
-        const fullscreenBtn = document.getElementById('html-preview-fullscreen');
-        
-        if (!previewContainer) return;
-        
-        const isFullscreen = previewContainer.classList.contains('max-w-full');
-        
-        if (!isFullscreen) {
-            // 放大
-            previewContainer.classList.remove('max-w-4xl', 'h-[80vh]');
-            previewContainer.classList.add('max-w-full', 'h-[95vh]', 'w-[95vw]');
-            if (fullscreenBtn) {
-                fullscreenBtn.innerHTML = `
-                    <i class="fas fa-compress text-gray-600 dark:text-gray-300"></i>
-                    <span class="hidden sm:inline">退出全屏</span>
-                `;
-                fullscreenBtn.title = "退出全屏";
-            }
-        } else {
-            // 缩小
-            previewContainer.classList.add('max-w-4xl', 'h-[80vh]');
-            previewContainer.classList.remove('max-w-full', 'h-[95vh]', 'w-[95vw]');
-            if (fullscreenBtn) {
-                fullscreenBtn.innerHTML = `
-                    <i class="fas fa-expand text-gray-600 dark:text-gray-300"></i>
-                    <span class="hidden sm:inline">全屏</span>
-                `;
-                fullscreenBtn.title = "全屏预览";
-            }
-        }
-    }
-    
-    // 为HTML代码块添加预览按钮
-    addPreviewButtonsToHtmlBlocks(forcePreview = false) {
-        // 查找所有代码块
-        document.querySelectorAll('.code-block').forEach(codeBlock => {
-            // 检查是否是HTML代码块
-            const headerElement = codeBlock.querySelector('.code-header span');
-            if (!headerElement) return;
-            
-            const language = headerElement.textContent.toLowerCase();
-            if (language === 'html' || language === 'htm') {
-                // 如果已经处理过，则跳过
-                if (codeBlock.getAttribute('data-preview-initialized') === 'true') return;
-                codeBlock.setAttribute('data-preview-initialized', 'true');
-                
-                // 创建唯一ID用于节流更新
-                const previewId = 'preview-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-                codeBlock.setAttribute('data-preview-id', previewId);
-                
-                const codeHeader = codeBlock.querySelector('.code-header');
-                const codeElement = codeBlock.querySelector('code');
-                const codeId = codeElement?.id;
-                
-                if (codeHeader && codeId && codeElement) {
-                    // 获取HTML代码
-                    const htmlCode = codeElement.textContent || '';
-                    
-                    // 保存原始代码到数据属性，便于复制按钮使用
-                    codeBlock.setAttribute('data-original-code', htmlCode);
-                    
-                    // 重新构建代码头部结构
-                    // 创建左侧按钮容器
-                    const leftButtons = document.createElement('div');
-                    leftButtons.className = 'left-buttons';
-                    
-                    // 创建右侧按钮容器
-                    const rightButtons = document.createElement('div');
-                    rightButtons.className = 'right-buttons';
-                    
-                    // 语言标识
-                    const langSpan = codeHeader.querySelector('span');
-                    if (langSpan) {
-                        leftButtons.appendChild(langSpan);
-                    }
-                    
-                    // 清空代码头部，重新组织结构
-                    codeHeader.innerHTML = '';
-                    codeHeader.appendChild(leftButtons);
-                    codeHeader.appendChild(rightButtons);
-                    
-                    // 创建一个容器，用于切换代码和预览
-                    const contentContainer = codeBlock.querySelector('pre');
-                    const codeContainer = contentContainer.cloneNode(true);
-                    const previewContainer = document.createElement('div');
-                    previewContainer.className = 'html-preview-container';
-                    
-                    // 创建一个iframe用于安全渲染HTML
-                    const iframe = document.createElement('iframe');
-                    iframe.className = 'preview-iframe';
-                    iframe.style.width = '100%';
-                    iframe.style.height = '100%';
-                    iframe.style.border = 'none';
-                    iframe.style.backgroundColor = 'white';
-                    previewContainer.appendChild(iframe);
-                    
-                    // 添加"查看源码/预览"按钮
-                    const viewSourceButton = document.createElement('button');
-                    viewSourceButton.className = 'source-button';
-                    
-                    // 添加放大预览按钮
-                    const previewButton = document.createElement('button');
-                    previewButton.className = 'preview-button';
-                    previewButton.setAttribute('data-code-id', codeId);
-                    previewButton.setAttribute('title', '弹窗放大预览');
-                    previewButton.innerHTML = `
-                        <i class="fas fa-external-link-alt"></i>
-                        <span>放大</span>
-                    `;
-                    
-                    // 添加刷新按钮
-                    const refreshButton = document.createElement('button');
-                    refreshButton.className = 'refresh-button';
-                    refreshButton.setAttribute('title', '刷新预览');
-                    refreshButton.innerHTML = `
-                        <i class="fas fa-sync-alt"></i>
-                        <span>刷新</span>
-                    `;
-                    
-                    // 添加复制按钮
-                    const copyButton = document.createElement('button');
-                    copyButton.className = 'copy-button';
-                    copyButton.setAttribute('title', '复制代码');
-                    copyButton.innerHTML = `
-                        <i class="fas fa-copy"></i>
-                        <span>复制</span>
-                    `;
-                    
-                    // 添加代码换行切换按钮
-                    const wrapButton = document.createElement('button');
-                    wrapButton.className = 'wrap-button';
-                    wrapButton.setAttribute('title', '切换代码换行');
-                    wrapButton.innerHTML = `
-                        <i class="fas fa-exchange-alt"></i>
-                        <span>换行</span>
-                    `;
-                    
-                    // 添加按钮到界面上
-                    // 左侧放控制按钮
-                    leftButtons.appendChild(viewSourceButton);
-                    leftButtons.appendChild(refreshButton);
-                    leftButtons.appendChild(previewButton);
-                    
-                    // 右侧放工具按钮
-                    rightButtons.appendChild(wrapButton);
-                    rightButtons.appendChild(copyButton);
-                    
-                    // 根据设置决定是显示预览还是源代码
-                    // 默认在AI回复中显示源代码，回复完成后由调用者决定是否切换到预览
-                    const shouldShowPreview = forcePreview || this.autoPreviewEnabled;
-                    
-                    if (shouldShowPreview) {
-                        // 预览模式
-                        if (contentContainer.parentNode) {
-                            contentContainer.parentNode.replaceChild(previewContainer, contentContainer);
-                        }
-                        viewSourceButton.innerHTML = `
-                            <i class="fas fa-code"></i>
-                            <span>源代码</span>
-                        `;
-                        viewSourceButton.setAttribute('title', '查看源代码');
-                        codeBlock.setAttribute('data-preview-mode', 'true');
-                        
-                        // 立即渲染HTML
-                        setTimeout(() => {
-                            if (iframe instanceof HTMLIFrameElement) {
-                                iframe.srcdoc = this.processHtmlContent(htmlCode);
-                            }
-                        }, 0);
-                    } else {
-                        // 源代码模式
-                        viewSourceButton.innerHTML = `
-                            <i class="fas fa-eye"></i>
-                            <span>预览</span>
-                        `;
-                        viewSourceButton.setAttribute('title', '查看预览');
-                        codeBlock.setAttribute('data-preview-mode', 'false');
-                        
-                        // 禁用刷新按钮
-                        refreshButton.style.opacity = '0.5';
-                        refreshButton.style.pointerEvents = 'none';
-                    }
-                    
-                    // 添加切换功能
-                    viewSourceButton.addEventListener('click', () => {
-                        const isPreviewMode = codeBlock.getAttribute('data-preview-mode') === 'true';
-                        
-                        if (isPreviewMode) {
-                            // 切换到源码视图
-                            if (previewContainer.parentNode) {
-                                previewContainer.parentNode.replaceChild(codeContainer, previewContainer);
-                            }
-                            viewSourceButton.innerHTML = `
-                                <i class="fas fa-eye"></i>
-                                <span>预览</span>
-                            `;
-                            viewSourceButton.setAttribute('title', '查看预览');
-                            codeBlock.setAttribute('data-preview-mode', 'false');
-                            
-                            // 禁用刷新按钮
-                            refreshButton.style.opacity = '0.5';
-                            refreshButton.style.pointerEvents = 'none';
-                        } else {
-                            // 切换到预览视图
-                            if (codeContainer.parentNode) {
-                                codeContainer.parentNode.replaceChild(previewContainer, codeContainer);
-                            }
-                            viewSourceButton.innerHTML = `
-                                <i class="fas fa-code"></i>
-                                <span>源代码</span>
-                            `;
-                            viewSourceButton.setAttribute('title', '查看源代码');
-                            codeBlock.setAttribute('data-preview-mode', 'true');
-                            
-                            // 更新预览
-                            if (iframe instanceof HTMLIFrameElement) {
-                                iframe.srcdoc = this.processHtmlContent(codeElement.textContent || '');
-                            }
-                            
-                            // 启用刷新按钮
-                            refreshButton.style.opacity = '1';
-                            refreshButton.style.pointerEvents = 'auto';
-                        }
-                    });
-                    
-                    // 添加弹窗预览功能
-                    previewButton.addEventListener('click', () => {
-                        if (htmlCode.trim()) {
-                            this.showPreview(htmlCode);
-                        }
-                    });
-                    
-                    // 添加刷新功能
-                    refreshButton.addEventListener('click', () => {
-                        if (codeBlock.getAttribute('data-preview-mode') === 'true') {
-                            // 更新预览
-                            if (iframe instanceof HTMLIFrameElement) {
-                                iframe.srcdoc = this.processHtmlContent(codeElement.textContent || '');
-                            }
-                        }
-                    });
-                    
-                    // 添加复制功能
-                    copyButton.addEventListener('click', () => {
-                        const code = codeBlock.getAttribute('data-original-code') || '';
-                        if (code) {
-                            navigator.clipboard.writeText(code)
-                                .then(() => {
-                                    // 更新复制按钮文本为"已复制"
-                                    const copyText = copyButton.querySelector('span');
-                                    if (copyText) {
-                                        const originalText = copyText.textContent;
-                                        copyText.textContent = '已复制';
-                                        setTimeout(() => {
-                                            copyText.textContent = originalText;
-                                        }, 2000);
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error('复制失败:', err);
-                                });
-                        }
-                    });
-                    
-                    // 添加代码换行功能
-                    wrapButton.addEventListener('click', () => {
-                        codeBlock.classList.toggle('wrap-code');
-                        const wrapText = wrapButton.querySelector('span');
-                        if (wrapText) {
-                            wrapText.textContent = codeBlock.classList.contains('wrap-code') ? '不换行' : '换行';
-                        }
-                    });
+                // 备用方案：通过容器查找
+                const closeBtnInContainer = this.previewContainer.querySelector('#close-preview-btn');
+                if (closeBtnInContainer) {
+                    closeBtnInContainer.addEventListener('click', () => this.closePreview());
                 }
             }
-        });
-    }
-    
-    // 更新特定HTML预览的内容，使用节流控制更新频率
-    updatePreview(codeBlockId, htmlContent) {
-        if (!codeBlockId) return;
-        
-        // 保存待更新的内容
-        this.pendingUpdates[codeBlockId] = htmlContent;
-        
-        const now = Date.now();
-        // 检查是否需要立即更新（首次更新或者超过节流时间间隔）
-        if (!this.lastUpdateTime[codeBlockId] || 
-            (now - this.lastUpdateTime[codeBlockId] > this.updateThrottleInterval)) {
             
-            this.performUpdate(codeBlockId);
-        } else if (!this.pendingTimeouts?.[codeBlockId]) {
-            // 设置定时器，延迟更新
-            if (!this.pendingTimeouts) this.pendingTimeouts = {};
-            
-            // 清除之前的定时器（如果有）
-            if (this.pendingTimeouts[codeBlockId]) {
-                clearTimeout(this.pendingTimeouts[codeBlockId]);
+            // 绑定刷新按钮
+            const refreshBtn = document.getElementById('refresh-preview-btn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => this.refreshPreview());
+            } else {
+                // 备用方案
+                const refreshBtnInContainer = this.previewContainer.querySelector('#refresh-preview-btn');
+                if (refreshBtnInContainer) {
+                    refreshBtnInContainer.addEventListener('click', () => this.refreshPreview());
+            }
             }
             
-            // 计算还需等待多久
-            const timeToWait = this.updateThrottleInterval - (now - this.lastUpdateTime[codeBlockId]);
+            // 绑定全屏按钮
+            const fullscreenBtn = document.getElementById('fullscreen-preview-btn');
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+            } else {
+                // 备用方案
+                const fullscreenBtnInContainer = this.previewContainer.querySelector('#fullscreen-preview-btn');
+                if (fullscreenBtnInContainer) {
+                    fullscreenBtnInContainer.addEventListener('click', () => this.toggleFullscreen());
+                }
+            }
             
-            // 设置新的定时器
-            this.pendingTimeouts[codeBlockId] = setTimeout(() => {
-                this.performUpdate(codeBlockId);
-                delete this.pendingTimeouts[codeBlockId];
-            }, timeToWait);
+            // 添加ESC键关闭预览
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.isShowing) {
+                    this.closePreview();
+                }
+            });
+            
+        } catch (error) {
         }
     }
     
-    // 执行实际的更新操作
-    performUpdate(codeBlockId) {
-        if (!this.pendingUpdates[codeBlockId]) return;
+    /**
+     * 修复不完整的HTML
+     * @param {string} html - HTML内容
+     * @returns {string} - 修复后的HTML
+     */
+    fixIncompleteHtml(html) {
+        if (!html) return '';
         
-        const codeBlock = document.querySelector(`.code-block[data-preview-id="${codeBlockId}"]`);
-        if (!codeBlock) return;
+        let fixedHtml = html.trim();
         
-        // 检查是否处于预览模式
-        if (codeBlock.getAttribute('data-preview-mode') === 'true') {
-            // 如果正在更新中，不执行更新以避免闪烁
-            if (this.isUpdating[codeBlockId]) return;
-            this.isUpdating[codeBlockId] = true;
+        // 如果不包含DOCTYPE，添加一个
+        if (!fixedHtml.includes('<!DOCTYPE') && !fixedHtml.includes('<!doctype')) {
+            fixedHtml = '<!DOCTYPE html>\n' + fixedHtml;
+        }
+        
+        // 如果不包含<html>标签，添加一个
+        if (!fixedHtml.includes('<html') && !fixedHtml.includes('<HTML')) {
+            if (!fixedHtml.includes('<body') && !fixedHtml.includes('<BODY')) {
+                fixedHtml = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n</head>\n<body>\n' + fixedHtml + '\n</body>\n</html>';
+            } else {
+                fixedHtml = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n</head>\n' + fixedHtml + '\n</html>';
+            }
+        }
+        
+        return fixedHtml;
+    }
+    
+    /**
+     * 显示HTML预览
+     * @param {string} html - HTML内容
+     */
+    showPreview(html) {
+        if (!html) {
+            return;
+        }
+        
+        // 保存当前HTML
+        this.currentHtml = html;
+        
+        // 处理HTML内容，修复不完整的HTML
+        const fixedHtml = this.fixIncompleteHtml(html);
+        
+        // 确保预览容器存在
+        if (!this.previewContainer || !document.body.contains(this.previewContainer)) {
+            this.createPreviewContainer();
+            this.bindEvents(); // 重新绑定事件
             
-            const previewContainer = codeBlock.querySelector('.html-preview-container');
-            if (!previewContainer) {
-                this.isUpdating[codeBlockId] = false;
+            // 如果仍然创建失败，提示错误并返回
+            if (!this.previewContainer) {
+                if (window.toast) {
+                    window.toast.error('无法创建预览窗口，请刷新页面后重试');
+                } else {
+                    alert('无法创建预览窗口，请刷新页面后重试');
+                }
+                return;
+        }
+    }
+    
+        // 显示预览容器
+        this.previewContainer.classList.remove('hidden');
+        this.isShowing = true;
+            
+        // 获取iframe - 使用多种方式尝试获取
+        let iframe = document.getElementById('html-preview-frame');
+        
+        // 如果找不到，尝试在预览容器中查找
+        if (!iframe && this.previewContainer) {
+            iframe = this.previewContainer.querySelector('#html-preview-frame');
+    }
+    
+        // 如果仍然找不到，尝试创建一个
+        if (!iframe) {
+            const contentContainer = this.previewContainer.querySelector('.overflow-auto');
+            
+            if (contentContainer) {
+                // 清空并创建新iframe
+                contentContainer.innerHTML = '';
+                iframe = document.createElement('iframe');
+                iframe.id = 'html-preview-frame';
+                iframe.className = 'w-full h-full border-0 dark:bg-white';
+                iframe.style.minHeight = '400px';
+                contentContainer.appendChild(iframe);
+            } else {
+                if (window.toast) {
+                    window.toast.error('预览初始化失败，请刷新页面后重试');
+                } else {
+                    alert('预览初始化失败，请刷新页面后重试');
+                }
+                return;
+            }
+        }
+        
+        // 确保iframe存在
+        if (!iframe) {
+            if (window.toast) {
+                window.toast.error('预览初始化失败，请刷新页面后重试');
+        } else {
+                alert('预览初始化失败，请刷新页面后重试');
+            }
+            return;
+    }
+    
+        // 写入HTML内容
+        try {
+            // 设置iframe允许所有权限
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-pointer-lock allow-popups-to-escape-sandbox allow-downloads allow-top-navigation');
+            iframe.setAttribute('allow', 'microphone; camera; geolocation; fullscreen; midi; encrypted-media; autoplay');
+            
+            const iframeDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+            if (!iframeDoc) {
                 return;
             }
             
-            // 使用双缓冲技术：创建新iframe在后台加载
-            const newIframe = document.createElement('iframe');
-            newIframe.className = 'preview-iframe new-iframe';
-            newIframe.style.opacity = '0';
-            newIframe.style.position = 'absolute';
-            newIframe.style.top = '0';
-            newIframe.style.left = '0';
-            newIframe.style.width = '100%';
-            newIframe.style.height = '100%';
-            newIframe.style.border = 'none';
-            newIframe.style.backgroundColor = 'white';
-            newIframe.style.transition = 'opacity 0.3s ease';
-            
-            // 将新iframe添加到容器
-            previewContainer.appendChild(newIframe);
-            
-            // 显示更新指示器
-            this.showUpdateIndicator(previewContainer);
-            
-            // 加载新内容到隐藏的iframe
-            if (newIframe instanceof HTMLIFrameElement) {
-                // 获取当前帧的滚动位置
-                const currentIframe = previewContainer.querySelector('.preview-iframe:not(.new-iframe)');
-                let scrollTop = 0;
-                let scrollLeft = 0;
-                
-                if (currentIframe instanceof HTMLIFrameElement && currentIframe.contentWindow) {
-                    try {
-                        scrollTop = currentIframe.contentWindow.document.documentElement.scrollTop || 
-                                  currentIframe.contentWindow.document.body.scrollTop;
-                        scrollLeft = currentIframe.contentWindow.document.documentElement.scrollLeft || 
-                                   currentIframe.contentWindow.document.body.scrollLeft;
-                    } catch (e) {
-                        console.log('无法获取滚动位置:', e);
-                    }
-                }
-                
-                // 设置内容
-                newIframe.srcdoc = this.processHtmlContent(this.pendingUpdates[codeBlockId]);
-                
-                // 当新iframe加载完成后
-                newIframe.onload = () => {
-                    // 恢复滚动位置
-                    if (newIframe.contentWindow) {
-                        try {
-                            newIframe.contentWindow.document.documentElement.scrollTop = scrollTop;
-                            newIframe.contentWindow.document.documentElement.scrollLeft = scrollLeft;
-                            newIframe.contentWindow.document.body.scrollTop = scrollTop;
-                            newIframe.contentWindow.document.body.scrollLeft = scrollLeft;
-                        } catch (e) {
-                            console.log('无法设置滚动位置:', e);
-                        }
-                    }
+            iframeDoc.open();
+            iframeDoc.write(fixedHtml);
+            iframeDoc.close();
                     
-                    // 淡入显示新iframe
-                    newIframe.style.opacity = '1';
-                    
-                    // 删除旧iframe
-                    setTimeout(() => {
-                        const oldIframes = previewContainer.querySelectorAll('.preview-iframe:not(.new-iframe)');
-                        oldIframes.forEach(oldIframe => {
-                            if (oldIframe.parentNode) {
-                                oldIframe.parentNode.removeChild(oldIframe);
-                            }
-                        });
-                        
-                        // 移除新iframe的标记类
-                        newIframe.classList.remove('new-iframe');
-                        
-                        // 更新最后更新时间
-                        this.lastUpdateTime[codeBlockId] = Date.now();
-                        
-                        // 隐藏更新指示器
-                        this.hideUpdateIndicator(previewContainer);
-                        
-                        // 标记更新完成
-                        this.isUpdating[codeBlockId] = false;
-                    }, 300);
-                };
+            // 允许iframe访问所有功能，移除限制代码
+
+        } catch (error) {
+            if (window.toast) {
+                window.toast.error('HTML预览渲染失败');
+                    } else {
+                alert('HTML预览渲染失败');
             }
         }
-        
-        // 保留内容，便于下次更新
-        codeBlock.setAttribute('data-original-code', this.pendingUpdates[codeBlockId]);
     }
     
-    // 显示更新指示器
-    showUpdateIndicator(container) {
-        if (!container) return;
-        
-        // 检查是否已存在指示器
-        let indicator = container.querySelector('.preview-update-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.className = 'preview-update-indicator';
-            indicator.innerHTML = '<div class="preview-update-spinner"></div><span>更新中...</span>';
-            container.appendChild(indicator);
-        } else {
-            indicator.style.display = 'flex';
+    /**
+     * 刷新预览
+     */
+    refreshPreview() {
+        if (this.isShowing && this.currentHtml) {
+            this.showPreview(this.currentHtml);
         }
     }
     
-    // 隐藏更新指示器
-    hideUpdateIndicator(container) {
-        if (!container) return;
+    /**
+     * 关闭预览
+     */
+    closePreview() {
+        if (this.previewContainer) {
+            this.previewContainer.classList.add('hidden');
+            this.isShowing = false;
+            this.isFullscreen = false;
+                            
+            // 重置全屏状态
+            const previewContent = this.previewContainer.querySelector('.relative');
+            if (previewContent) {
+                previewContent.classList.remove('fixed', 'inset-0', 'z-[100]', 'max-w-none');
+                previewContent.style.width = '';
+                previewContent.style.height = '';
+                previewContent.style.maxHeight = '';
+                previewContent.style.margin = '';
+                previewContent.style.left = '';
+                previewContent.style.right = '';
+                previewContent.style.top = '';
+                previewContent.style.bottom = '';
+                            }
+                    
+            // 重置iframe高度
+            const iframe = document.getElementById('html-preview-frame');
+            if (iframe) {
+                iframe.style.height = '';
+            }
+            
+            // 重置内容区域高度
+            const contentContainer = this.previewContainer.querySelector('.overflow-auto');
+            if (contentContainer) {
+                contentContainer.style.maxHeight = '';
+            }
+                        }
+    }
+    
+    // 添加新方法: 切换全屏模式
+    toggleFullscreen() {
+        const previewContent = this.previewContainer?.querySelector('.relative');
+        const iframe = document.getElementById('html-preview-frame') || 
+                     (this.previewContainer && this.previewContainer.querySelector('#html-preview-frame'));
+        const contentContainer = this.previewContainer?.querySelector('.overflow-auto');
         
-        const indicator = container.querySelector('.preview-update-indicator');
-        if (indicator) {
-            indicator.style.display = 'none';
+        if (!previewContent || !iframe) {
+            return;
+        }
+        
+        if (!this.isFullscreen) {
+            // 进入全屏模式 - 使用95vw和95vh以占据尽可能多的屏幕空间
+            previewContent.classList.add('fixed', 'inset-0', 'z-[100]', 'max-w-none');
+            previewContent.style.width = '95vw';
+            previewContent.style.height = '95vh';
+            previewContent.style.margin = 'auto';
+            // previewContent.style.left = '2.5vw'; // 居中显示
+            // previewContent.style.right = '2.5vw';
+            // previewContent.style.top = '2.5vh';
+            // previewContent.style.bottom = '2.5vh';
+            
+            // 调整iframe高度，让它填充可用空间
+            iframe.style.height = 'calc(95vh - 90px)'; // 保留顶部和底部空间
+         
+            // 增加内容区域高度
+            if (contentContainer) {
+                contentContainer.style.maxHeight = 'calc(95vh - 110px)';
+            }
+            
+            this.isFullscreen = true;
+            
+            // 更新全屏按钮图标
+            const fullscreenBtn = document.getElementById('fullscreen-preview-btn') || 
+                                 (this.previewContainer && this.previewContainer.querySelector('#fullscreen-preview-btn'));
+            if (fullscreenBtn) {
+                fullscreenBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M9 6H6v3m12 9v-3m0 0h-3" />
+                    </svg>
+                `;
+                    }
+        } else {
+            // 退出全屏模式
+            previewContent.classList.remove('fixed', 'inset-0', 'z-[100]', 'max-w-none');
+            previewContent.style.width = '';
+            previewContent.style.height = '';
+            previewContent.style.maxHeight = '';
+            previewContent.style.margin = '';
+            previewContent.style.left = '';
+            previewContent.style.right = '';
+            previewContent.style.top = '';
+            previewContent.style.bottom = '';
+            
+            // 重置iframe高度
+            iframe.style.height = '';
+            
+            // 重置内容区域高度
+            if (contentContainer) {
+                contentContainer.style.maxHeight = '';
+            }
+            
+            this.isFullscreen = false;
+                        
+            // 更新全屏按钮图标
+            const fullscreenBtn = document.getElementById('fullscreen-preview-btn') || 
+                                 (this.previewContainer && this.previewContainer.querySelector('#fullscreen-preview-btn'));
+            if (fullscreenBtn) {
+                fullscreenBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                    </svg>
+                `;
+            }
         }
     }
 }

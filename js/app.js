@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 注意：CodeBlockManager现在在ChatUI中创建和初始化
     // 它会自动设置全局对象，这里不需要重复设置
     
-    console.log('PureAI Panel 初始化完成!');
     
     // 检查是否需要显示欢迎消息
     const hasShownWelcome = localStorage.getItem('has_shown_welcome');

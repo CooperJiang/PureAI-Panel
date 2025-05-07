@@ -29,7 +29,6 @@ export class ConversationManager {
                 }
             }
         } catch (error) {
-            console.error('加载对话失败:', error);
             this.conversations = [];
             this.createNewConversation();
         }
@@ -43,7 +42,6 @@ export class ConversationManager {
                 localStorage.setItem('activeConversation', this.currentConversationId);
             }
         } catch (error) {
-            console.error('保存对话失败:', error);
         }
     }
     
@@ -55,7 +53,13 @@ export class ConversationManager {
             messages: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            isPinned: false // 添加置顶标记
+            isPinned: false, // 添加置顶标记
+            // 添加每个对话的独立配置
+            config: {
+                model: localStorage.getItem('selected_model') || 'gpt-4o-mini',
+                temperature: 0.7,
+                systemMessage: ''
+            }
         };
         
         this.conversations.unshift(newConversation);
@@ -152,7 +156,9 @@ export class ConversationManager {
             conversation.title = title;
         }
         
+        // 立即保存对话到localStorage，确保每条消息都被保存
         this.saveConversations();
+        
         return message;
     }
     
@@ -255,14 +261,12 @@ export class ConversationManager {
         // 验证索引有效性
         if (userIndex < 0 || userIndex >= conversation.messages.length ||
             assistantIndex < 0 || assistantIndex >= conversation.messages.length) {
-            console.error(`[ConversationManager] 无效的消息索引: ${userIndex}, ${assistantIndex}`);
             return false;
         }
         
         // 验证消息角色
         if (conversation.messages[userIndex].role !== 'user' ||
             conversation.messages[assistantIndex].role !== 'assistant') {
-            console.error(`[ConversationManager] 消息角色不匹配: ${userIndex}=${conversation.messages[userIndex].role}, ${assistantIndex}=${conversation.messages[assistantIndex].role}`);
             return false;
         }
         

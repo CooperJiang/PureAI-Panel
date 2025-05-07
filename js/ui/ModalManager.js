@@ -1,210 +1,66 @@
 /**
  * 模态框管理模块 - 负责处理所有弹窗和模态框功能
  */
+import { SettingsModalComponent } from '../../components/SettingsModal.js';
+
 export class ModalManager {
     /**
      * 构造函数
      * @param {Object} options - 配置选项
      * @param {Object} options.settingsManager - 设置管理器
      * @param {Object} options.chatComponent - 聊天消息组件
+     * @param {Object} options.conversationManager - 对话管理器
+     * @param {Object} options.modelManager - 模型管理器
      * @param {Function} options.onEditMessage - 编辑消息回调
      * @param {Function} options.onSaveSettings - 保存设置回调
      */
     constructor(options) {
         this.settingsManager = options.settingsManager;
         this.chatComponent = options.chatComponent;
+        this.conversationManager = options.conversationManager;
+        this.modelManager = options.modelManager;
         this.onEditMessage = options.onEditMessage;
         this.onSaveSettings = options.onSaveSettings;
+        this.currentModal = null;
     }
     
     /**
-     * 打开设置模态框
+     * 关闭所有模态框
+     */
+    closeAllModals() {
+        // 清除当前模态框
+        if (this.currentModal) {
+            this.currentModal.close();
+            this.currentModal = null;
+        }
+    }
+    
+    /**
+     * 打开API设置模态框
      */
     openSettingsModal() {
-        // 获取模态框元素
-        let modal = document.getElementById('settingsModal');
-        
-        // 如果不存在，则创建一个新的模态框
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'settingsModal';
-            modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden';
+        try {
+            // 确保旧的模态框被移除
+            this.closeAllModals();
             
-            // 设置模态框内容
-            modal.innerHTML = `
-                <div class="bg-white dark:bg-[#202123] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto transform transition-transform duration-300" id="modalContent">
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-semibold text-openai-text dark:text-white flex items-center">
-                                <i class="fas fa-cog mr-2 text-openai-gray"></i>
-                                API 设置
-                            </h3>
-                            <button id="closeSettings" class="text-openai-gray hover:text-openai-text dark:hover:text-white transition-colors">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="space-y-6">
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-openai-gray">
-                                    Base URL
-                                </label>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <i class="fas fa-link text-openai-gray"></i>
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        id="baseUrl" 
-                                        class="w-full pl-10 pr-4 py-2 border border-openai-border rounded-md focus:outline-none focus:ring-1 focus:ring-openai-green dark:bg-[#343541] dark:text-white" 
-                                        placeholder="例如: https://api.openai.com">
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-openai-gray">
-                                    API Key
-                                </label>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <i class="fas fa-key text-openai-gray"></i>
-                                    </div>
-                                    <input 
-                                        type="password" 
-                                        id="apiKey" 
-                                        class="w-full pl-10 pr-12 py-2 border border-openai-border rounded-md focus:outline-none focus:ring-1 focus:ring-openai-green dark:bg-[#343541] dark:text-white" 
-                                        placeholder="输入你的 API Key">
-                                    <button id="toggleKeyVisibility" class="absolute inset-y-0 right-0 flex items-center pr-3 text-openai-gray hover:text-openai-text transition-colors">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </div>
-                                <p class="text-xs text-openai-gray mt-1">你的API密钥将只会保存在本地浏览器中</p>
-                            </div>
-                            
-                            <div class="flex items-center">
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="streamEnabled" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-openai-green"></div>
-                                    <span class="ml-3 text-sm font-medium text-openai-text dark:text-white">启用流式响应（打字效果）</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end mt-8">
-                            <button id="saveSettings" class="px-4 py-2 bg-openai-green text-white rounded-md hover:bg-opacity-90 transition-colors flex items-center gap-2">
-                                <i class="fas fa-save"></i>
-                                保存设置
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 添加到DOM
-            document.body.appendChild(modal);
-        }
-        
-        modal.classList.remove('hidden');
-        
-        // 加载当前设置
-        const baseUrlInput = /** @type {HTMLInputElement} */ (document.getElementById('baseUrl'));
-        const apiKeyInput = /** @type {HTMLInputElement} */ (document.getElementById('apiKey'));
-        const streamEnabledInput = /** @type {HTMLInputElement} */ (document.getElementById('streamEnabled'));
-        
-        if (baseUrlInput) {
-            baseUrlInput.value = this.settingsManager.get('baseUrl') || '';
-        }
-        
-        if (apiKeyInput) {
-            apiKeyInput.value = this.settingsManager.get('apiKey') || '';
-        }
-        
-        if (streamEnabledInput) {
-            streamEnabledInput.checked = this.settingsManager.get('streamEnabled') !== false;
-        }
-        
-        // 保存设置按钮
-        const saveButton = document.getElementById('saveSettings');
-        if (saveButton) {
-            // 移除现有事件监听器
-            const newSaveButton = saveButton.cloneNode(true);
-            saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-            
-            // 添加新的事件监听器
-            newSaveButton.addEventListener('click', () => {
-                this.saveSettings();
-                modal.classList.add('hidden');
-            });
-        }
-        
-        // 关闭按钮
-        const closeButton = document.getElementById('closeSettings');
-        if (closeButton) {
-            // 移除现有事件监听器
-            const newCloseButton = closeButton.cloneNode(true);
-            closeButton.parentNode.replaceChild(newCloseButton, closeButton);
-            
-            // 添加新的事件监听器
-            newCloseButton.addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
-        }
-        
-        // 密码显示切换
-        const toggleKeyBtn = document.getElementById('toggleKeyVisibility');
-        if (toggleKeyBtn && toggleKeyBtn instanceof HTMLElement) {
-            // 移除现有事件监听器
-            const newToggleBtn = toggleKeyBtn.cloneNode(true);
-            toggleKeyBtn.parentNode.replaceChild(newToggleBtn, toggleKeyBtn);
-            
-            // 添加新的事件监听器
-            if (newToggleBtn instanceof HTMLElement) {
-                newToggleBtn.addEventListener('click', () => {
-                    const icon = newToggleBtn.querySelector('i');
-                    if (icon && apiKeyInput) {
-                        if (apiKeyInput.type === 'password') {
-                            apiKeyInput.type = 'text';
-                            icon.classList.remove('fa-eye');
-                            icon.classList.add('fa-eye-slash');
-                        } else {
-                            apiKeyInput.type = 'password';
-                            icon.classList.remove('fa-eye-slash');
-                            icon.classList.add('fa-eye');
-                        }
+            // 创建模态框
+            const settingsModal = new SettingsModalComponent(
+                this.settingsManager, 
+                () => {
+                    // 保存设置后回调
+                    if (this.onSaveSettings) {
+                        this.onSaveSettings();
                     }
-                });
-            }
-        }
-    }
-    
-    /**
-     * 保存设置
-     */
-    saveSettings() {
-        const baseUrlInput = /** @type {HTMLInputElement} */ (document.getElementById('baseUrl'));
-        const apiKeyInput = /** @type {HTMLInputElement} */ (document.getElementById('apiKey'));
-        const streamEnabledInput = /** @type {HTMLInputElement} */ (document.getElementById('streamEnabled'));
-        
-        if (baseUrlInput) {
-            this.settingsManager.set('baseUrl', baseUrlInput.value);
-        }
-        
-        if (apiKeyInput) {
-            this.settingsManager.set('apiKey', apiKeyInput.value);
-        }
-        
-        if (streamEnabledInput) {
-            this.settingsManager.set('streamEnabled', streamEnabledInput.checked);
-        }
-        
-        // 触发回调
-        if (this.onSaveSettings && typeof this.onSaveSettings === 'function') {
-            this.onSaveSettings();
-        }
-        
-        // 显示成功提示
-        if (window.toast) {
-            window.toast.success('设置已保存');
+                },
+                this.conversationManager,  // 添加会话管理器
+                this.modelManager  // 添加模型管理器
+            );
+            
+            // 保存引用并打开
+            this.currentModal = settingsModal;
+            settingsModal.open();
+        } catch (error) {
+            // 静默处理错误
         }
     }
     

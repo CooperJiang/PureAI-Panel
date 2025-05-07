@@ -85,7 +85,6 @@ export class MessageHandler {
         const welcomeMessage = document.getElementById('welcome-message-container');
         if (welcomeMessage) {
             welcomeMessage.remove();
-            console.log('[MessageHandler] 已自动移除欢迎消息');
         }
         
         // 使用传入的messageId或生成新ID
@@ -93,7 +92,6 @@ export class MessageHandler {
         
         // 确保生成的元素存在
         if (!result.element || !result.id) {
-            console.error('[MessageHandler] 创建助手消息元素失败');
             return { element: null, id: null };
         }
         
@@ -119,7 +117,6 @@ export class MessageHandler {
         // 设置图片预览
         this.setupImagePreviews();
         
-        console.log(`[MessageHandler] 添加助手消息 ID: ${result.id}, 流: ${isStream}`);
         return result;
     }
     
@@ -174,7 +171,6 @@ export class MessageHandler {
                 }, 100); // 延迟100ms确保DOM已更新
             }
         } catch (e) {
-            console.error('设置图片预览失败:', e);
         }
     }
     
@@ -300,168 +296,117 @@ export class MessageHandler {
     }
     
     /**
-     * 绑定消息事件（编辑和删除）
+     * 绑定消息操作事件
      */
     bindMessageEvents() {
         if (!this.chatMessages) return;
         
-        // 清除所有现有按钮的事件监听器（通过克隆替换）
-        this.chatMessages.querySelectorAll('.edit-message-btn, .delete-message-btn, .copy-message-btn, .preview-message-btn').forEach(button => {
-            const newButton = button.cloneNode(true);
-            if (button.parentNode) {
-                button.parentNode.replaceChild(newButton, button);
-            }
-        });
+        // 清除旧的事件监听器（通过替换元素的克隆版本）
+        const removeOldListeners = (selector) => {
+            const elements = this.chatMessages.querySelectorAll(selector);
+            elements.forEach(element => {
+                const clone = element.cloneNode(true);
+                if (element.parentNode) {
+                    element.parentNode.replaceChild(clone, element);
+                }
+            });
+        };
         
-        // 编辑消息 - 包括用户和AI消息
-        const editBtns = this.chatMessages.querySelectorAll('.edit-message-btn');
-        editBtns.forEach(button => {
+        // 移除所有旧的事件监听器
+        removeOldListeners('.edit-message-btn');
+        removeOldListeners('.copy-message-btn');
+        removeOldListeners('.delete-message-btn');
+        
+        // 重新绑定编辑按钮事件
+        const editButtons = this.chatMessages.querySelectorAll('.edit-message-btn');
+        editButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // 在新DOM结构中，消息元素是最外层带有ID的div
-                const messageElement = button.closest('.chat, .chat-start, .chat-end, [id^="user-message-"], [id^="assistant-message-"]');
-                if (!messageElement || !(messageElement instanceof HTMLElement)) {
-                    return;
-                }
+                // 找到消息元素和索引
+                const messageElement = button.closest('.chat');
+                if (!messageElement || !messageElement.dataset.index) return;
                 
-                const messageIndex = parseInt(messageElement.dataset.index || '-1');
-                if (messageIndex === -1) {
-                    return;
-                }
+                const index = parseInt(messageElement.dataset.index);
+                if (isNaN(index)) return;
                 
-                const originalContent = messageElement.dataset.content || '';
-                // 检查消息类型 - 检查多个可能的类名
-                const isAiMessage = messageElement.classList.contains('chat-start') || 
-                                    messageElement.id.startsWith('assistant-message-');
+                // 获取原始内容
+                const content = messageElement.dataset.content || '';
+                const isAi = messageElement.classList.contains('chat-start');
                 
-                this.showEditMessageModal(messageIndex, originalContent, isAiMessage);
+                // 显示编辑模态框
+                this.showEditMessageModal(index, content, isAi);
             });
         });
         
-        // 删除消息
-        const deleteBtns = this.chatMessages.querySelectorAll('.delete-message-btn');
-        
-        deleteBtns.forEach(button => {
+        // 重新绑定复制按钮事件
+        const copyButtons = this.chatMessages.querySelectorAll('.copy-message-btn');
+        copyButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // 在新DOM结构中查找消息元素
-                const messageElement = button.closest('.chat, .chat-start, .chat-end, [id^="user-message-"], [id^="assistant-message-"]');
-                if (!messageElement || !(messageElement instanceof HTMLElement)) {
-                    return;
-                }
+                // 找到消息元素
+                const messageElement = button.closest('.chat');
+                if (!messageElement) return;
                 
-                
-                const messageIndex = parseInt(messageElement.dataset.index || '-1');
-                if (messageIndex === -1) {
-                    return;
-                }
-                
-                this.onDeleteMessage(messageIndex);
-                // 检查消息类型 - 多种可能的类名
-                // const isAiMessage = messageElement.classList.contains('chat-start') || 
-                //                    messageElement.id.startsWith('assistant-message-');
-                // const confirmMessage = isAiMessage ? '确认删除此AI回复？' : '确认删除此消息？';
-                
-                // if (confirm(confirmMessage)) {
-                //     if (this.onDeleteMessage && typeof this.onDeleteMessage === 'function') {
-                //         this.onDeleteMessage(messageIndex);
-                //     } else {
-                //         console.error("[MessageHandler] 删除消息回调未定义");
-                //     }
-                // }
-            });
-        });
-        
-        // 复制消息
-        const copyBtns = this.chatMessages.querySelectorAll('.copy-message-btn');
-        
-        copyBtns.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // 在新DOM结构中查找消息元素
-                const messageElement = button.closest('.chat, .chat-start, .chat-end, [id^="user-message-"], [id^="assistant-message-"]');
-                if (!messageElement || !(messageElement instanceof HTMLElement)) {
-                    return;
-                }
-                
-                
-                // 查找消息内容元素 - 适应不同的DOM结构
-                const contentElement = messageElement.querySelector('.markdown-content, .assistant-content, [id^="content-"]');
-                if (!contentElement) {
-                    return;
-                }
-                
-                // 获取消息的纯文本内容
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = contentElement.innerHTML;
-                
-                // 移除代码块中的按钮和标题
-                tempDiv.querySelectorAll('.code-header').forEach(el => el.remove());
-                
-                const textContent = tempDiv.innerText || tempDiv.textContent || '';
+                // 获取内容
+                const content = messageElement.dataset.content || '';
                 
                 // 复制到剪贴板
-                navigator.clipboard.writeText(textContent)
+                navigator.clipboard.writeText(content)
                     .then(() => {
-                        // 显示成功提示
-                        const toast = /** @type {any} */ (window['toast']);
-                        if (toast) {
-                            toast.show('已复制到剪贴板', 'success');
-                        } else {
-                            alert('已复制到剪贴板');
+                        // 显示复制成功反馈
+                        const originalText = button.querySelector('i').classList.toString();
+                        button.querySelector('i').className = 'fas fa-check text-sm text-green-500';
+                        
+                        // 使用Toast提示
+                        if (window.toast) {
+                            window.toast.success('已复制到剪贴板');
                         }
+                        
+                        // 2秒后恢复原样
+                        setTimeout(() => {
+                            if (originalText) {
+                                button.querySelector('i').className = originalText;
+                            } else {
+                                button.querySelector('i').className = 'fas fa-copy text-sm text-gray-500';
+                            }
+                        }, 2000);
                     })
                     .catch(err => {
-                        console.error('复制失败:', err);
-                        alert('复制失败，请手动选择并复制内容');
+                        if (window.toast) {
+                            window.toast.error('复制失败，请重试');
+                        }
                     });
             });
         });
         
-        // 预览HTML
-        this.chatMessages.querySelectorAll('.preview-message-btn').forEach(button => {
+        // 重新绑定删除按钮事件
+        const deleteButtons = this.chatMessages.querySelectorAll('.delete-message-btn');
+        deleteButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // 在新DOM结构中查找消息元素
-                const messageElement = button.closest('.chat, .chat-start, .chat-end, [id^="user-message-"], [id^="assistant-message-"]');
-                if (!messageElement || !(messageElement instanceof HTMLElement)) {
-                    return;
-                }
+                // 找到消息元素和索引
+                const messageElement = button.closest('.chat');
+                if (!messageElement || !messageElement.dataset.index) return;
                 
+                const index = parseInt(messageElement.dataset.index);
+                if (isNaN(index)) return;
                 
-                const htmlBlocks = messageElement.querySelectorAll('.code-block');
-                const htmlPreview = /** @type {any} */ (window["htmlPreview"]);
-                
-                if (htmlBlocks.length > 0 && htmlPreview) {
-                    htmlBlocks.forEach(block => {
-                        const headerElement = block.querySelector('.code-header span');
-                        if (headerElement && ['html', 'htm'].includes(headerElement.textContent.toLowerCase())) {
-                            // 找到HTML代码块，显示预览
-                            const preElement = block.querySelector('pre code');
-                            if (preElement) {
-                                const htmlContent = preElement.textContent || '';
-                                htmlPreview.showPreview(htmlContent);
-                                return;
-                            }
-                        }
-                    });
-                } else {
-                    // 显示提示
-                    const toast = /** @type {any} */ (window['toast']);
-                    if (toast) {
-                        toast.show('没有找到HTML代码块', 'warning');
+                // 确认删除
+                if (confirm('确定要删除这条消息吗？')) {
+                    // 调用删除回调
+                    if (this.onDeleteMessage) {
+                        this.onDeleteMessage(index);
                     }
                 }
             });
         });
+        
     }
     
     /**
@@ -599,10 +544,8 @@ export class MessageHandler {
                     imageViewer.setupImagePreviews();
                 }
             } catch (e) {
-                console.error('设置图片预览失败:', e);
             }
         } catch (e) {
-            console.error('自动转换HTML预览失败:', e);
         }
     }
     
@@ -628,7 +571,6 @@ export class MessageHandler {
                 tokenCountElement.title = "估算的Token数量";
             }
         } else {
-            console.error(`[MessageHandler] 找不到Token计数元素 #${messageId} .token-count`);
         }
         
         // 移除所有光标
@@ -646,5 +588,41 @@ export class MessageHandler {
                 codeBlockManager.updateCodeBlocks(messageElement);
             }
         }
+    }
+    
+    /**
+     * 处理思考标签，包装成思考容器
+     * @param {string} content - 消息内容
+     * @returns {string} - 处理后的内容
+     */
+    processThinkContent(content) {
+        if (!content) return content;
+
+        // 检查是否包含思考标签
+        if (content.includes('<think>') && content.includes('</think>')) {
+            // 提取所有思考内容
+            const regex = /<think>([\s\S]*?)<\/think>/g;
+            return content.replace(regex, (match, thinkContent) => {
+                return `<div class="think-container">${thinkContent}</div>`;
+            });
+        }
+        
+        return content;
+    }
+
+    /**
+     * 处理消息内容中的特殊标记
+     * @param {string} content - 消息内容
+     * @returns {string} - 处理后的内容
+     */
+    processMessageContent(content) {
+        if (!content) return '';
+        
+        // 首先处理思考内容
+        content = this.processThinkContent(content);
+        
+        // 其他处理...
+        
+        return content;
     }
 } 

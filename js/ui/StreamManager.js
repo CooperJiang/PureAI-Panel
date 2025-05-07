@@ -31,18 +31,32 @@ export class StreamManager {
         
         this.globalGeneratingState = isGenerating;
         
-        // 设置body的生成状态类
         if (isGenerating) {
             document.body.classList.add('isGenerating');
+            
+            // 处理代码块样式 - 生成开始
+            document.querySelectorAll('pre').forEach(pre => {
+                pre.setAttribute('data-generating', 'true');
+                pre.style.maxHeight = 'none';
+                pre.style.overflowY = 'hidden';
+                pre.style.minHeight = '100px';
+            });
         } else {
+            // 处理完成后更新所有代码块 
             document.body.classList.remove('isGenerating');
             
-            // 强制代码块管理器重新初始化代码块高度
+            // 更新代码块滚动条
             if (window.codeBlockManager) {
-                setTimeout(() => {
-                    window.codeBlockManager.updateExistingCodeBlocksScroll();
-                }, 300);
+                window.codeBlockManager.updateExistingCodeBlocksScroll();
             }
+            
+            // 修改所有代码块状态 - 生成结束
+            document.querySelectorAll('pre').forEach(pre => {
+                pre.setAttribute('data-generating', 'false');
+                pre.style.maxHeight = '400px';
+                pre.style.overflowY = 'auto';
+                pre.style.removeProperty('min-height');
+            });
         }
     }
     
@@ -60,7 +74,6 @@ export class StreamManager {
         
         // 检查是否需要重置动画数据 - 如果消息ID不同，则创建新的动画数据
         if (this.streamAnimationData && this.streamAnimationData.messageId !== messageId) {
-            console.log(`[流式渲染] 检测到新的消息ID: ${messageId}，重置动画数据`);
             this.streamAnimationData = null;
         }
         
@@ -80,7 +93,6 @@ export class StreamManager {
                 renderedIndex: 0,        // 已渲染的字符索引
                 needsRerender: false     // 是否需要完全重渲染
             };
-            console.log('[流式渲染] 初始化动画数据');
         }
         
         // 检测内容变化量
@@ -96,7 +108,6 @@ export class StreamManager {
             
             // 如果新增内容很多，可能需要调整渲染速度
             if (contentDelta > 100) {
-                console.log(`[流式渲染] 检测到大量新内容 (${contentDelta} 字符)，将动态调整渲染速度`);
                 // 大量新内容，提高每帧渲染字符数
                 this.streamAnimationData.charsPerFrame = Math.max(3, Math.min(10, Math.floor(contentDelta / 50)));
             } else {
@@ -114,7 +125,6 @@ export class StreamManager {
         // 如果内容已经很长且有大量未渲染字符，加速渲染以追赶
         const unrenderedChars = content.length - this.streamAnimationData.renderedIndex;
         if (content.length > 1000 && unrenderedChars > 500) {
-            console.log(`[流式渲染] 未渲染字符过多 (${unrenderedChars})，加速渲染`);
             // 大幅提高渲染速度，但不立即跳到结尾
             this.streamAnimationData.renderedIndex += Math.min(200, unrenderedChars / 2);
         }
@@ -124,9 +134,7 @@ export class StreamManager {
             this.streamAnimationData.isAnimating = true;
             // 只有在首次启动动画时才重置渲染索引
             if (this.streamAnimationData.renderedIndex === 0) {
-                console.log('[流式渲染] 首次动画，从头开始渲染');
             } else {
-                console.log(`[流式渲染] 恢复动画，当前渲染索引: ${this.streamAnimationData.renderedIndex}/${content.length}`);
             }
             this.animateText();
         }
@@ -148,14 +156,23 @@ export class StreamManager {
         const contentElement = document.getElementById(`content-${this.streamAnimationData.messageId}`);
         if (!contentElement) {
             this.streamAnimationData.isAnimating = false;
-            console.log('[流式渲染] 无法找到内容元素，停止动画');
             return;
         }
         
         const now = performance.now();
         
-        // 控制动画速度 - 每帧渲染更少字符使动画更平滑
-        if (now - this.streamAnimationData.lastUpdateTime < 30) { // 约33fps的更新率
+        // 动态调整渲染频率 - 对于长文本可以降低频率以提高性能
+        const contentLength = this.streamAnimationData.rawTextContent.length;
+        let frameInterval = 16; // 默认约60fps
+        
+        if (contentLength > 10000) {
+            frameInterval = 30; // 长文本降低到30fps
+        } else if (contentLength > 5000) {
+            frameInterval = 24; // 中等长度文本降低到40fps
+        }
+        
+        // 控制动画速度
+        if (now - this.streamAnimationData.lastUpdateTime < frameInterval) { 
             requestAnimationFrame(() => this.animateText());
             return;
         }
@@ -173,18 +190,28 @@ export class StreamManager {
                                this.streamAnimationData.rawTextContent.endsWith('_') ||
                                this.streamAnimationData.rawTextContent.endsWith('`');
         
+        // 检测是否正在渲染代码块
+        const isInCodeBlock = /```[\s\S]*?$/.test(
+            this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex)
+        ) && !this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex).endsWith('```');
+        
         if (isSpecialFormat || this.streamAnimationData.needsRerender) {
             // 对于特殊格式，完全重新渲染以确保正确格式化
-            console.log('[流式渲染] 检测到特殊格式，执行完全重渲染');
             this.streamAnimationData.needsRerender = false;
             
-            // 增加渲染索引 - 特殊格式时增加更多字符以加快渲染
-            const charsToAdd = isSpecialFormat ? 5 : this.streamAnimationData.charsPerFrame;
+            // 根据内容类型调整渲染速度
+            let charsToAdd = isSpecialFormat ? 5 : this.streamAnimationData.charsPerFrame;
+            
+            // 在代码块内部加快渲染速度
+            if (isInCodeBlock) {
+                charsToAdd = Math.max(10, charsToAdd * 2);
+            }
+            
+            // 增加渲染索引
             this.streamAnimationData.renderedIndex += charsToAdd;
             
             // 如果是代码块结束，立即渲染整个内容
             if (this.streamAnimationData.rawTextContent.endsWith('```')) {
-                console.log('[流式渲染] 检测到代码块结束，立即渲染完整内容');
                 this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
             }
             
@@ -199,22 +226,32 @@ export class StreamManager {
             // 格式化并显示
             contentElement.innerHTML = this.chatComponent.formatter.formatMessage(partialText);
             
-            console.log(`[流式渲染] 渲染索引: ${this.streamAnimationData.renderedIndex}/${this.streamAnimationData.rawTextContent.length}`);
+            if (this.streamAnimationData.renderedIndex % 20 === 0 || 
+                this.streamAnimationData.renderedIndex === this.streamAnimationData.rawTextContent.length) {
+            }
         } else {
             // 增加渲染索引 - 普通文本时使用动态渲染速度
             // 根据剩余内容长度动态调整速度 - 内容越长，速度越快
             const remainingChars = this.streamAnimationData.rawTextContent.length - this.streamAnimationData.renderedIndex;
             let charsPerFrame = this.streamAnimationData.charsPerFrame;
             
-            // 动态调整速度
-            if (remainingChars > 1000) {
-                charsPerFrame = 10; // 非常长的内容，快速渲染
+            // 动态调整速度 - 使渲染速度更自然
+            if (remainingChars > 2000) {
+                charsPerFrame = Math.min(30, Math.max(15, Math.floor(remainingChars / 100))); // 非常长的内容，快速渲染
+            } else if (remainingChars > 1000) {
+                charsPerFrame = 10; // 长内容
             } else if (remainingChars > 500) {
-                charsPerFrame = 5;  // 长内容
+                charsPerFrame = 6;  // 中等内容
             } else if (remainingChars > 200) {
-                charsPerFrame = 3;  // 中等内容
+                charsPerFrame = 3;  // 较短内容
             } else {
-                charsPerFrame = 1;  // 较短内容，慢速渲染
+                // 最后一点内容减慢速度，增强用户体验
+                charsPerFrame = remainingChars > 50 ? 2 : 1;
+            }
+            
+            // 避免速度过快引起的闪烁，当剩余字符较少时平滑减速
+            if (remainingChars < 100 && charsPerFrame > 1) {
+                charsPerFrame = Math.max(1, charsPerFrame / 2);
             }
             
             this.streamAnimationData.renderedIndex += charsPerFrame;
@@ -230,8 +267,8 @@ export class StreamManager {
             // 为简单文本使用更高效的渲染方式
             contentElement.innerHTML = this.chatComponent.formatter.formatMessage(partialText);
             
-            if (this.streamAnimationData.renderedIndex % 10 === 0) {
-                console.log(`[流式渲染] 渲染索引: ${this.streamAnimationData.renderedIndex}/${this.streamAnimationData.rawTextContent.length}`);
+            if (this.streamAnimationData.renderedIndex % 50 === 0 || 
+                this.streamAnimationData.renderedIndex === this.streamAnimationData.rawTextContent.length) {
             }
         }
 
@@ -248,75 +285,28 @@ export class StreamManager {
         if (this.streamAnimationData.rawTextContent.substr(this.streamAnimationData.renderedIndex - 3, 3) === '```' ||
             this.streamAnimationData.rawTextContent.substr(this.streamAnimationData.renderedIndex - 2, 2) === '![') {
             this.streamAnimationData.needsRerender = true;
-            console.log('[流式渲染] 检测到格式开始标记，标记需要重渲染');
         }
-        
-        // 应用代码高亮和其他功能（仅当内容发生变化时）
-        try {
-            const formatter = this.chatComponent.formatter;
-            formatter.addCodeInteractionButtons();
-            this.chatComponent.applyCodeHighlightingToElement(contentElement);
-        } catch (error) {
-            console.error('[流式渲染] 应用代码高亮失败:', error);
-        }
-        
-        // 处理图片预览
-        try {
-            const imageViewer = window['imageViewer'];
-            if (imageViewer && typeof imageViewer.setupImagePreviews === 'function') {
-                imageViewer.setupImagePreviews();
-            }
-        } catch (e) {
-            console.error('[流式渲染] 设置图片预览失败:', e);
-        }
-        
-        // 只应用一次HTML预览框架
-        try {
-            const htmlPreview = window["htmlPreview"];
-            if (htmlPreview && typeof window.chatUI !== 'undefined' && !window.chatUI.didInitPreview) {
-                if (typeof htmlPreview.setAutoPreview === 'function') {
-                    htmlPreview.setAutoPreview(false);
-                }
-                if (typeof htmlPreview.addPreviewButtonsToHtmlBlocks === 'function') {
-                    htmlPreview.addPreviewButtonsToHtmlBlocks(false);
-                    window.chatUI.didInitPreview = true;
-                }
-            }
-        } catch (e) {
-            console.error('[流式渲染] 应用HTML预览失败:', e);
-        }
-        
-        // 更新Token计数
-        const tokenCountElement = document.querySelector(`#${this.streamAnimationData.messageId} .token-count`);
-        if (tokenCountElement && tokenCountElement instanceof HTMLElement) {
-            const estimatedTokens = this.chatComponent.estimateTokenCount(this.streamAnimationData.fullContent);
-            tokenCountElement.textContent = `${estimatedTokens} tokens`;
-            tokenCountElement.title = "估计的Token数量（将在完成后更新）";
-        }
-        
-        // 滚动到底部
-        this.scrollToBottom();
         
         // 检查动画是否完成
         if (this.streamAnimationData.renderedIndex >= this.streamAnimationData.rawTextContent.length) {
-            console.log('[流式渲染] 动画完成');
             
-            // 确保显示完整内容
-            if (this.streamAnimationData.fullContent !== this.streamAnimationData.rawTextContent) {
-                console.log('[流式渲染] 检测到可能的内容不匹配，强制显示完整内容');
-                contentElement.innerHTML = this.chatComponent.formatter.formatMessage(this.streamAnimationData.fullContent);
-            }
-            
-            // 移除所有光标元素
-            document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
-            
-            this.streamAnimationData.isAnimating = false;
-            
-            // 如果有完成回调，调用它
-            if (this.onAnimationComplete && typeof this.onAnimationComplete === 'function') {
-                console.log('[流式渲染] 调用动画完成回调');
-                this.onAnimationComplete(this.streamAnimationData.messageId, this.streamAnimationData.fullContent);
-            }
+            // 添加轻微延迟，确保最后部分内容有时间显示
+            setTimeout(() => {
+                // 确保显示完整内容
+                if (this.streamAnimationData.fullContent !== this.streamAnimationData.rawTextContent) {
+                    contentElement.innerHTML = this.chatComponent.formatter.formatMessage(this.streamAnimationData.fullContent);
+                }
+                
+                // 移除所有光标元素
+                document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
+                
+                this.streamAnimationData.isAnimating = false;
+                
+                // 如果有完成回调，调用它
+                if (this.onAnimationComplete && typeof this.onAnimationComplete === 'function') {
+                    this.onAnimationComplete(this.streamAnimationData.messageId, this.streamAnimationData.fullContent);
+                }
+            }, 50);
             
             return;
         }
@@ -358,7 +348,6 @@ export class StreamManager {
         // 停止动画
         if (this.streamAnimationData) {
             this.streamAnimationData.isAnimating = false;
-            console.log(`[流式渲染] 停止动画：${this.streamAnimationData.messageId}`);
             
             // 移除生成中的全局状态类
             document.body.classList.remove('isGenerating');
@@ -374,7 +363,6 @@ export class StreamManager {
             
             // 在控制台记录最终渲染进度
             if (finalProgress) {
-                console.log(`[流式渲染] 最终渲染进度: ${finalProgress.percentage.toFixed(1)}%`);
             }
         }
     }
@@ -419,28 +407,79 @@ export class StreamManager {
      * @param {string} finalContent - 最终内容
      */
     completeStreaming(messageId, finalContent) {
-        console.log(`[流式渲染] 完成流式响应 ${messageId}`);
-        
-        // 停止所有动画
-        this.stopAllAnimations();
-        
-        // 移除生成中的全局状态类
-        document.body.classList.remove('isGenerating');
         
         // 获取内容元素
         const contentElement = document.getElementById(`content-${messageId}`);
         if (!contentElement) {
-            console.warn(`[流式渲染] 无法找到内容元素 #content-${messageId}`);
             return;
+        }
+        
+        // 获取消息元素并更新dataset.content属性
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            messageElement.dataset.content = finalContent;
+        } else {
+        }
+        
+        // 处理并收集HTML代码块
+        try {
+            // 检查是否有CodeBlockManager实例
+            const codeBlockManager = window['codeBlockManager'];
+            if (codeBlockManager && typeof codeBlockManager.collectHtmlStreams === 'function') {
+                // 处理可能被分割的HTML代码块
+                codeBlockManager.collectHtmlStreams(contentElement);
+            }
+        } catch (error) {
         }
         
         // 清除所有光标
         this.clearCursors(messageId);
         
-        // 设置最终内容
-        try {
-            // 使用最终内容进行渲染
-            contentElement.innerHTML = this.chatComponent.formatter.formatMessage(finalContent);
+        // 添加渐进式渲染的过渡效果
+        const currentContent = contentElement.innerHTML;
+        const formattedFinalContent = this.chatComponent.formatter.formatMessage(finalContent);
+        
+        // 如果当前显示的内容和最终内容差异较大，使用平滑过渡
+        if (Math.abs(currentContent.length - formattedFinalContent.length) > 50) {
+            // 使用CSS过渡效果
+            contentElement.style.transition = 'opacity 0.3s ease';
+            contentElement.style.opacity = '0.7';
+            
+            // 设置一个短暂延迟后再更新内容，让过渡效果更明显
+            setTimeout(() => {
+                // 更新内容
+                contentElement.innerHTML = formattedFinalContent;
+                
+                // 应用代码高亮
+                this.chatComponent.applyCodeHighlightingToElement(contentElement.closest('.chat'));
+                
+                // 添加代码交互按钮
+                this.chatComponent.formatter.addCodeInteractionButtons();
+                
+                // 再次处理HTML代码块，确保预览按钮正常工作
+                try {
+                    if (window['codeBlockManager']) {
+                        window['codeBlockManager'].updateCodeBlocks();
+                    }
+                } catch (error) {
+                }
+                
+                // 恢复透明度，产生淡入效果
+                contentElement.style.opacity = '1';
+                
+                // 延迟后移除过渡效果
+                setTimeout(() => {
+                    contentElement.style.transition = '';
+                }, 300);
+                
+                // 触发回调
+                if (typeof this.onAnimationComplete === 'function') {
+                    this._executeCallback(messageId, finalContent);
+                }
+            }, 100);
+        } else {
+            // 如果差异小，直接更新内容
+            contentElement.innerHTML = formattedFinalContent;
             
             // 应用代码高亮
             this.chatComponent.applyCodeHighlightingToElement(contentElement.closest('.chat'));
@@ -448,13 +487,38 @@ export class StreamManager {
             // 添加代码交互按钮
             this.chatComponent.formatter.addCodeInteractionButtons();
             
+            // 更新代码块
+            try {
+                if (window['codeBlockManager']) {
+                    window['codeBlockManager'].updateCodeBlocks();
+                }
+            } catch (error) {
+            }
+            
             // 触发回调
             if (typeof this.onAnimationComplete === 'function') {
                 this._executeCallback(messageId, finalContent);
             }
-        } catch (error) {
-            console.error(`[流式渲染] 完成流式响应时出错:`, error);
         }
+        
+        // 停止所有动画
+        this.stopAllAnimations();
+        
+        // 移除生成中的全局状态类
+        document.body.classList.remove('isGenerating');
+
+        // 更新代码块滚动条，避免UI抖动
+        if (window.codeBlockManager) {
+            window.codeBlockManager.updateExistingCodeBlocksScroll();
+        }
+
+        // 修改所有代码块状态
+        document.querySelectorAll('pre').forEach(pre => {
+            pre.setAttribute('data-generating', 'false');
+            pre.style.maxHeight = '400px';
+            pre.style.overflowY = 'auto';
+            pre.style.removeProperty('min-height');
+        });
     }
     
     /**
@@ -472,18 +536,40 @@ export class StreamManager {
         
         // 分离回调执行，确保其在当前函数栈完成后才执行
         if (callback && typeof callback === 'function') {
-            console.log('[流式响应] 安排动画完成回调异步执行');
             
             // 使用Promise并添加延迟执行回调，彻底避免递归调用
             Promise.resolve().then(() => {
                 // 确保回调调用前检查状态，防止多次调用
                 try {
-                    console.log(`[流式响应] 执行异步回调，消息ID: ${messageId}`);
                     callback(messageId, finalContent);
                 } catch (error) {
-                    console.error('[流式响应] 回调执行出错:', error);
+                } finally {
+                    // 强制确保生成状态被重置
+                    document.body.classList.remove('isGenerating');
+                    
+                    // 尝试获取全局UI实例并重置状态
+                    if (window.chatUI) {
+                        try {
+                            window.chatUI.isGenerating = false;
+                            if (typeof window.chatUI.showStopButton === 'function') {
+                                window.chatUI.showStopButton(false);
+                            }
+                        } catch (e) {
+                        }
+                    }
                 }
             });
+            
+            // 设置超时保障机制，确保即使Promise执行失败，状态也能被重置
+            setTimeout(() => {
+                document.body.classList.remove('isGenerating');
+                if (window.chatUI && window.chatUI.isGenerating) {
+                    window.chatUI.isGenerating = false;
+                    if (typeof window.chatUI.showStopButton === 'function') {
+                        window.chatUI.showStopButton(false);
+                    }
+                }
+            }, 1000);
         }
     }
     

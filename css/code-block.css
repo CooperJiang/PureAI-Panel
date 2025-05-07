@@ -10,7 +10,11 @@
     border: 1px solid #e0e0e3;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     min-width: 300px;
-    transition: max-height 0.3s ease-in-out;
+    transition: max-height 0.3s ease-in-out, box-shadow 0.2s ease;
+}
+
+.code-block:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
 .code-block.wrap-code pre {
@@ -42,13 +46,7 @@
     min-width: 80% !important; /* 增加最小宽度避免被挤压 */
 }
 
-/* 生成过程中隐藏代码块按钮，避免闪烁 */
-.isGenerating .code-header .flex {
-    opacity: 0;
-    visibility: hidden;
-    transition: none;
-}
-
+/* 解决code-header闪烁问题 */
 .code-header {
     display: flex;
     justify-content: space-between;
@@ -58,17 +56,54 @@
     color: #4a5568;
     font-size: 0.8rem;
     border-bottom: 1px solid #d1d5db;
+    height: 38px; /* 固定高度防止闪烁 */
+    min-height: 38px; /* 确保最小高度一致 */
+    box-sizing: border-box;
+    overflow: hidden; /* 防止内容溢出 */
+    position: relative; /* 为绝对定位子元素做准备 */
+    transform: translateZ(0); /* 启用GPU加速 */
+    will-change: transform; /* 提示浏览器此元素可能会改变 */
+    transition: background-color 0.2s ease;
 }
 
+/* 改进按钮容器，防止按钮导致的布局闪烁 */
 .code-header .left-buttons {
     display: flex;
     align-items: center;
+    height: 100%;
+    min-width: 60px; /* 设置最小宽度，防止空间挤压 */
 }
 
 .code-header .right-buttons {
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    height: 100%;
+    min-width: 100px; /* 设置最小宽度，防止按钮闪烁 */
+}
+
+/* 在生成过程中隐藏按钮，但保留布局空间 */
+.isGenerating .code-header .flex {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease;
+    position: absolute;
+    right: 1rem;
+}
+
+/* 语言标签样式优化 */
+.code-header span {
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .wrap-button {
@@ -81,11 +116,17 @@
     cursor: pointer;
     background-color: #edf2f7;
     color: #4a5568;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s;
+    height: 24px; /* 固定高度防止闪烁 */
 }
 
 .wrap-button:hover {
     background-color: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.wrap-button:active {
+    transform: translateY(0);
 }
 
 .copy-button {
@@ -98,11 +139,17 @@
     cursor: pointer;
     background-color: #edf2f7;
     color: #4a5568;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s;
+    height: 24px; /* 固定高度防止闪烁 */
 }
 
 .copy-button:hover {
     background-color: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.copy-button:active {
+    transform: translateY(0);
 }
 
 /* 预览按钮 */
@@ -116,11 +163,17 @@
     cursor: pointer;
     background-color: #3b82f6;
     color: white;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s;
+    height: 24px; /* 固定高度防止闪烁 */
 }
 
 .preview-button:hover {
     background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.preview-button:active {
+    transform: translateY(0);
 }
 
 /* 暗黑模式 */

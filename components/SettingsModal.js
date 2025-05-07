@@ -1,9 +1,14 @@
 // 设置模态框组件
+import { CustomSelect } from './CustomSelect.js';
+
 export class SettingsModalComponent {
-    constructor(settingsManager, onSave) {
+    constructor(settingsManager, onSave, conversationManager, modelManager) {
         this.settingsManager = settingsManager;
+        this.conversationManager = conversationManager;
+        this.modelManager = modelManager;
         this.onSave = onSave;
         this.modalElement = null;
+        this.modelSelect = null;  // 模型选择器实例
         this.initModal();
     }
     
@@ -15,7 +20,7 @@ export class SettingsModalComponent {
         
         // 设置模态框内容
         this.modalElement.innerHTML = `
-            <div class="bg-white dark:bg-[#202123] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto transform transition-transform duration-300 scale-95 opacity-0" id="modalContent">
+            <div class="bg-white dark:bg-[#202123] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto transform transition-transform duration-300 scale-95 opacity-0" id="modalContent">
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-6">
                         <h3 class="text-lg font-semibold text-openai-text dark:text-white flex items-center">
@@ -73,6 +78,57 @@ export class SettingsModalComponent {
                                 <span class="ml-3 text-sm font-medium text-openai-text dark:text-white">启用流式响应（打字效果）</span>
                             </label>
                         </div>
+                        
+                        <div class="border-t border-openai-border my-4 pt-4">
+                            <h4 class="text-md font-semibold text-openai-text dark:text-white mb-4 flex items-center">
+                                <i class="fas fa-sliders-h mr-2 text-openai-gray"></i>
+                                当前对话高级设置
+                            </h4>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-openai-gray">
+                                        对话模型
+                                    </label>
+                                    <div id="modelSelectContainer"></div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-openai-gray flex justify-between">
+                                        <span>温度 (Temperature)</span>
+                                        <span id="temperatureValue" class="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">0.7</span>
+                                    </label>
+                                    <input 
+                                        type="range" 
+                                        id="temperature" 
+                                        min="0" 
+                                        max="2" 
+                                        step="0.1" 
+                                        value="0.7"
+                                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                                    >
+                                    <div class="flex justify-between text-xs text-openai-gray">
+                                        <span>精确</span>
+                                        <span>平衡</span>
+                                        <span>创意</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2 mt-4">
+                                <label class="block text-sm font-medium text-openai-gray flex justify-between">
+                                    <span>系统消息 (System Message)</span>
+                                    <span class="text-xs text-openai-gray">引导AI如何回应</span>
+                                </label>
+                                <textarea 
+                                    id="systemMessage" 
+                                    class="w-full px-3 py-2 border border-openai-border rounded-md focus:outline-none focus:ring-1 focus:ring-openai-green dark:bg-[#343541] dark:text-white resize-y text-xs font-mono"
+                                    placeholder="设置对话的系统指令，告诉AI如何回应..."
+                                    rows="5"
+                                ></textarea>
+                                <p class="text-xs text-openai-gray mt-1">系统消息会添加到对话的开头，但对用户不可见</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="flex justify-end mt-8">
@@ -123,6 +179,60 @@ export class SettingsModalComponent {
             }
         });
         
+        // 温度滑块值显示
+        const temperatureSlider = this.modalElement.querySelector('#temperature');
+        const temperatureValue = this.modalElement.querySelector('#temperatureValue');
+        
+        if (temperatureSlider && temperatureValue) {
+            temperatureSlider.addEventListener('input', () => {
+                if (temperatureSlider instanceof HTMLInputElement) {
+                    temperatureValue.textContent = temperatureSlider.value;
+                }
+            });
+        }
+        
+        // 初始化自定义模型选择器
+        const modelSelectContainer = this.modalElement.querySelector('#modelSelectContainer');
+        if (modelSelectContainer && this.modelManager) {
+            // 准备模型选项
+            const modelOptions = [];
+            
+            // 添加内置模型
+            this.modelManager.builtInModels.forEach(model => {
+                modelOptions.push({
+                    id: model.id,
+                    name: model.name
+                });
+            });
+            
+            // 添加自定义模型
+            const customModels = this.modelManager.getCustomModels();
+            if (customModels && customModels.length > 0) {
+                customModels.forEach(model => {
+                    modelOptions.push({
+                        id: model.id,
+                        name: model.name
+                    });
+                });
+            }
+            
+            // 获取当前对话的模型ID
+            let selectedModelId = '';
+            const currentConversation = this.conversationManager.getCurrentConversation();
+            if (currentConversation && currentConversation.config && currentConversation.config.model) {
+                selectedModelId = currentConversation.config.model;
+            }
+            
+            // 创建自定义选择器
+            this.modelSelect = new CustomSelect({
+                id: 'conversationModelSelect',
+                placeholder: '选择模型',
+                options: modelOptions,
+                value: selectedModelId,
+                container: modelSelectContainer
+            });
+        }
+        
         // 保存设置
         const saveBtn = this.modalElement.querySelector('#saveSettings');
         saveBtn.addEventListener('click', () => {
@@ -130,13 +240,54 @@ export class SettingsModalComponent {
             const apiKey = this.modalElement.querySelector('#apiKey');
             const streamToggle = this.modalElement.querySelector('#streamToggle');
             
+            // 高级设置
+            const temperature = this.modalElement.querySelector('#temperature');
+            const systemMessage = this.modalElement.querySelector('#systemMessage');
+            
             if (baseUrl instanceof HTMLInputElement && 
                 apiKey instanceof HTMLInputElement && 
                 streamToggle instanceof HTMLInputElement) {
                 
+                // 保存全局设置
                 this.settingsManager.set('baseUrl', baseUrl.value);
                 this.settingsManager.set('apiKey', apiKey.value);
                 this.settingsManager.set('streamEnabled', streamToggle.checked);
+                
+                // 保存当前对话的高级设置
+                if (this.conversationManager) {
+                    const currentConversation = this.conversationManager.getCurrentConversation();
+                    if (currentConversation) {
+                        // 确保配置对象存在
+                        if (!currentConversation.config) {
+                            currentConversation.config = {};
+                        }
+                        
+                        // 获取旧模型ID
+                        const oldModelId = currentConversation.config.model;
+                        
+                        // 从自定义选择器获取模型ID
+                        const modelId = this.modelSelect ? this.modelSelect.getValue() : '';
+                        if (modelId) {
+                            currentConversation.config.model = modelId;
+                            
+                            // 同步更新顶部模型选择器
+                            if (this.modelManager && currentConversation.config.model !== oldModelId) {
+                                this.modelManager.selectModel(currentConversation.config.model);
+                            }
+                        }
+                        
+                        if (temperature instanceof HTMLInputElement) {
+                            currentConversation.config.temperature = parseFloat(temperature.value);
+                        }
+                        
+                        if (systemMessage instanceof HTMLTextAreaElement) {
+                            currentConversation.config.systemMessage = systemMessage.value;
+                        }
+                        
+                        // 保存对话
+                        this.conversationManager.saveConversations();
+                    }
+                }
                 
                 if (typeof this.onSave === 'function') {
                     this.onSave();
@@ -147,7 +298,50 @@ export class SettingsModalComponent {
         });
     }
     
+    // 打开模态框时加载当前对话的设置
+    loadConversationSettings() {
+        if (!this.conversationManager) return;
+        
+        const currentConversation = this.conversationManager.getCurrentConversation();
+        if (!currentConversation) return;
+        
+        // 确保对话有配置对象
+        if (!currentConversation.config) {
+            currentConversation.config = {
+                model: localStorage.getItem('selected_model') || 'gpt-4o-mini',
+                temperature: 0.7,
+                systemMessage: ''
+            };
+        }
+        
+        // 获取表单元素
+        const temperatureSlider = this.modalElement.querySelector('#temperature');
+        const temperatureValue = this.modalElement.querySelector('#temperatureValue');
+        const systemMessage = this.modalElement.querySelector('#systemMessage');
+        
+        // 设置模型 (使用CustomSelect)
+        if (this.modelSelect && currentConversation.config.model) {
+            this.modelSelect.setValue(currentConversation.config.model);
+        }
+        
+        // 设置温度
+        if (temperatureSlider instanceof HTMLInputElement && currentConversation.config.temperature !== undefined) {
+            temperatureSlider.value = currentConversation.config.temperature.toString();
+            if (temperatureValue) {
+                temperatureValue.textContent = currentConversation.config.temperature.toString();
+            }
+        }
+        
+        // 设置系统消息
+        if (systemMessage instanceof HTMLTextAreaElement && currentConversation.config.systemMessage) {
+            systemMessage.value = currentConversation.config.systemMessage;
+        }
+    }
+    
     open() {
+        // 加载当前对话的设置
+        this.loadConversationSettings();
+        
         // 显示模态框
         this.modalElement.classList.remove('opacity-0', 'pointer-events-none');
         this.modalElement.classList.add('opacity-100');

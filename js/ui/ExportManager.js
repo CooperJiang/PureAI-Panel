@@ -26,25 +26,29 @@ export class ExportManager {
         // 检查是否已存在导出按钮
         if (document.getElementById('exportBtn')) return;
         
-        // 创建导出按钮
+        // 创建导出按钮 - 使用与其他按钮相同的样式
         const exportBtn = document.createElement('button');
         exportBtn.id = 'exportBtn';
-        exportBtn.className = 'h-8 w-8 flex items-center justify-center rounded-md hover:bg-openai-hover transition-all text-openai-gray mr-2';
+        exportBtn.className = 'btn-action group';
         exportBtn.title = '导出对话';
-        exportBtn.innerHTML = '<i class="fas fa-download text-sm"></i>';
+        exportBtn.innerHTML = `
+            <div class="btn-action-content">
+                <i class="fas fa-download text-sm group-hover:text-openai-green transition-colors"></i>
+            </div>
+        `;
         
         // 创建下拉菜单
         const dropdown = document.createElement('div');
-        dropdown.className = 'export-dropdown absolute hidden mt-2 w-40 bg-white shadow-lg rounded-md border border-openai-border z-50';
+        dropdown.className = 'export-dropdown absolute hidden mt-2 w-40 bg-white dark:bg-gray-800 shadow-lg rounded-md border border-openai-border z-50';
         dropdown.innerHTML = `
             <ul class="py-1">
                 <li>
-                    <button id="exportMd" class="px-4 py-2 text-sm text-openai-text hover:bg-openai-hover w-full text-left">
+                    <button id="exportMd" class="px-4 py-2 text-sm text-openai-text dark:text-gray-200 hover:bg-openai-hover dark:hover:bg-gray-700 w-full text-left transition-colors">
                         导出为 Markdown
                     </button>
                 </li>
                 <li>
-                    <button id="exportPdf" class="px-4 py-2 text-sm text-openai-text hover:bg-openai-hover w-full text-left">
+                    <button id="exportPdf" class="px-4 py-2 text-sm text-openai-text dark:text-gray-200 hover:bg-openai-hover dark:hover:bg-gray-700 w-full text-left transition-colors">
                         导出为 PDF
                     </button>
                 </li>
@@ -63,7 +67,7 @@ export class ExportManager {
             settingsBtn.parentNode.insertBefore(container, settingsBtn);
         } else {
             // 如果找不到设置按钮，则添加到头部工具栏
-            const toolbarRight = header.querySelector('.flex.items-center.gap-2');
+            const toolbarRight = header.querySelector('.flex.items-center.gap-3');
             if (toolbarRight) {
                 toolbarRight.insertBefore(container, toolbarRight.firstChild);
             }
@@ -204,7 +208,6 @@ export class ExportManager {
                                 window.toast.success('已导出为PDF格式');
                             })
                             .catch(err => {
-                                console.error('PDF导出失败:', err);
                                 document.body.removeChild(tempContainer);
                                 // @ts-ignore
                                 window.toast.error('PDF导出失败，请稍后重试');
@@ -216,7 +219,6 @@ export class ExportManager {
                     }
                 })
                 .catch(err => {
-                    console.error('加载html2pdf失败:', err);
                     document.body.removeChild(tempContainer);
                     // @ts-ignore
                     window.toast.error('加载PDF生成库失败，请检查网络连接');
