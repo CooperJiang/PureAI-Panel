@@ -1,0 +1,89 @@
+/* 动画模块 - 包含所有动画和过渡效果 */
+
+/* 自动调整文本区域高度 */
+.auto-resize {
+    resize: none;
+    overflow-y: hidden;
+    min-height: 40px;
+    transition: height 0.1s;
+}
+
+/* 流式响应的闪烁光标 */
+.cursor-blink {
+    display: inline-block;
+    width: 0.5rem;
+    height: 1.2rem;
+    background-color: #8e8ea0;
+    margin-left: 0.1rem;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    opacity: 0.7;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0; }
+}
+
+/* 通用过渡动画效果 */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.fade-out {
+    animation: fadeOut 0.3s ease-in-out;
+}
+
+.zoom-in {
+    animation: zoomIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* 旋转动画 */
+@keyframes rotateAnimation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fa-spinner {
+    animation: rotateAnimation 1s linear infinite;
+}
+
+/* 预览动画效果 */
+@keyframes scaleUpAnimation {
+    from { transform: scale(0.98); }
+    to { transform: scale(1); }
+}
+
+@keyframes scaleDownAnimation {
+    from { transform: scale(1.02); }
+    to { transform: scale(1); }
+}
+
+/* 加载旋转动画 */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.preview-loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #6366f1;
+    animation: spin 1s linear infinite;
+} 

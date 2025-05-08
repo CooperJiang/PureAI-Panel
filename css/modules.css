@@ -1,0 +1,65 @@
+/* 模块化CSS导入文件 */
+
+/* 基础样式 */
+@import 'modules/scrollbar.css';
+@import 'modules/animations.css';
+
+/* 聊天组件样式 */
+@import 'modules/chat-message.css';
+@import 'modules/markdown.css';
+@import 'modules/code-block.css';
+@import 'modules/conversation-list.css';
+@import 'modules/input-area.css';
+@import 'modules/message-actions.css';
+@import 'modules/message-time.css';
+
+/* 加载其他已存在的模块 */
+@import 'sidebar.css';
+@import 'modals.css';
+@import 'buttons.css';
+@import 'model-dropdown.css';
+@import 'layout.css';
+@import 'base.css';
+
+/* 添加中断按钮的滑入动画 */
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slideup {
+  animation: slideUp 0.3s ease forwards;
+}
+
+/* 中断按钮脉动效果 */
+@keyframes gentle-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+#interruptButton {
+  animation: gentle-pulse 2s infinite;
+}
+
+#interruptButton:hover {
+  animation: none;
+  transform: translateY(-1px);
+  transition: transform 0.2s;
+}
+
+#interruptButton:active {
+  transform: translateY(0);
+} 

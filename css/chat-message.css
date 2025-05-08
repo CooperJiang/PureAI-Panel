@@ -147,12 +147,13 @@
 /* 光标动画 */
 .cursor-blink {
     display: inline-block;
-    width: 0.5rem;
-    height: 1rem;
+    width: 2px;
+    height: 1.2em;
     background-color: #10a37f;
     animation: cursor-blink 1s step-end infinite;
     vertical-align: text-bottom;
-    margin-left: 0.125rem;
+    margin-left: 1px;
+    position: relative;
 }
 
 @keyframes cursor-blink {
@@ -172,13 +173,24 @@
     margin-left: 3rem;
 }
 
-/* 生成中的样式 */
+/* 生成中的样式 - 仅针对当前生成的消息 */
 .isGenerating .chat-start .message-content {
     border-left: 2px solid #10a37f;
 }
 
+/* 当前正在生成的消息特殊样式 */
+.chat-start[data-generating="true"] .message-content {
+    border-left: 3px solid #10a37f;
+    box-shadow: 0 0 8px rgba(16, 163, 127, 0.2);
+}
+
 [data-theme="dark"] .isGenerating .chat-start .message-content {
     border-left: 2px solid #7dd3fc;
+}
+
+[data-theme="dark"] .chat-start[data-generating="true"] .message-content {
+    border-left: 3px solid #7dd3fc;
+    box-shadow: 0 0 8px rgba(125, 211, 252, 0.3);
 }
 
 /* 消息加载占位符 */

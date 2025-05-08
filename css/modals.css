@@ -160,4 +160,196 @@
     max-width: 90vw;
     max-height: 80vh;
     object-fit: contain;
+}
+
+/* 模态框 - 定义模态对话框和弹窗的样式 */
+
+/* 模态背景 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* 模态框容器 */
+.modal {
+    background-color: var(--background-color);
+    border-radius: 8px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    margin: 1.5rem;
+    transform: translateY(4px);
+    transition: transform 0.2s ease-in-out;
+    max-height: calc(100vh - 3rem);
+    display: flex;
+    flex-direction: column;
+}
+
+/* 模态框头部 */
+.modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* 模态框内容 */
+.modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* 模态框底部 */
+.modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* 模态框标签 */
+.modal-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* 模态框输入框 */
+.modal-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.modal-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+/* 模态框按钮 */
+.modal-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.modal-button-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: 1px solid transparent;
+}
+
+.modal-button-primary:hover {
+    background-color: var(--primary-dark);
+}
+
+.modal-button-secondary {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-button-secondary:hover {
+    background-color: var(--tertiary-bg);
+}
+
+/* 模态框关闭按钮 */
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+/* 模态框动画 */
+.modal-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.modal-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.modal-exit {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.modal-exit-active {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 300ms, transform 300ms;
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .modal {
+    background-color: var(--secondary-bg);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* 模态框按钮暗色模式 */
+[data-theme="dark"] .modal-button-secondary {
+    background-color: var(--tertiary-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-button-secondary:hover {
+    background-color: var(--button-hover-bg);
+}
+
+/* 全局模态框按钮类 - 用于兼容现有样式 */
+[data-theme="dark"] .bg-white {
+    background-color: var(--secondary-bg) !important;
+}
+
+[data-theme="dark"] .text-gray-700 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .hover\:bg-gray-50:hover {
+    background-color: var(--tertiary-bg) !important;
 } 

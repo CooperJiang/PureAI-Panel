@@ -58,7 +58,7 @@ export class HtmlPreview {
                             </button>
                         </div>
                     </div>
-                    <div class="overflow-auto p-4 flex-grow" style="background-color: white;">
+                    <div class="overflow-auto p-4 flex-grow">
                         <iframe id="html-preview-frame" class="w-full h-full border-0 dark:bg-white" style="min-height: 400px;"></iframe>
                     </div>
                     <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
@@ -176,8 +176,8 @@ export class HtmlPreview {
         // 保存当前HTML
         this.currentHtml = html;
         
-        // 处理HTML内容，修复不完整的HTML
-        const fixedHtml = this.fixIncompleteHtml(html);
+        // 处理HTML内容，修复不完整的HTML并添加安全限制
+        let fixedHtml = this.fixIncompleteHtml(html);
         
         // 确保预览容器存在
         if (!this.previewContainer || !document.body.contains(this.previewContainer)) {
@@ -192,8 +192,8 @@ export class HtmlPreview {
                     alert('无法创建预览窗口，请刷新页面后重试');
                 }
                 return;
+            }
         }
-    }
     
         // 显示预览容器
         this.previewContainer.classList.remove('hidden');
@@ -205,7 +205,7 @@ export class HtmlPreview {
         // 如果找不到，尝试在预览容器中查找
         if (!iframe && this.previewContainer) {
             iframe = this.previewContainer.querySelector('#html-preview-frame');
-    }
+        }
     
         // 如果仍然找不到，尝试创建一个
         if (!iframe) {
@@ -233,44 +233,119 @@ export class HtmlPreview {
         if (!iframe) {
             if (window.toast) {
                 window.toast.error('预览初始化失败，请刷新页面后重试');
-        } else {
+            } else {
                 alert('预览初始化失败，请刷新页面后重试');
             }
             return;
-    }
+        }
     
         // 写入HTML内容
         try {
             // 设置iframe允许所有权限
-            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-pointer-lock allow-popups-to-escape-sandbox allow-downloads allow-top-navigation');
-            iframe.setAttribute('allow', 'microphone; camera; geolocation; fullscreen; midi; encrypted-media; autoplay');
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-pointer-lock');
+            iframe.setAttribute('allow', 'microphone; camera; geolocation; fullscreen; midi;');
             
-            const iframeDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
-            if (!iframeDoc) {
-                return;
+            // 使用blob URL代替write方法，避免变量重复声明问题
+            const blob = new Blob([fixedHtml], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // 清理之前创建的blob URL（如果有）
+            if (iframe._blobUrl) {
+                URL.revokeObjectURL(iframe._blobUrl);
             }
             
-            iframeDoc.open();
-            iframeDoc.write(fixedHtml);
-            iframeDoc.close();
-                    
-            // 允许iframe访问所有功能，移除限制代码
-
+            // 保存当前blob URL以便后续清理
+            iframe._blobUrl = blobUrl;
+            
+            // 使用src加载内容
+            iframe.src = blobUrl;
+            
+            // 添加保护措施：监控iframe的性能
+            this.monitorIframePerformance(iframe);
+            
         } catch (error) {
             if (window.toast) {
                 window.toast.error('HTML预览渲染失败');
-                    } else {
+            } else {
                 alert('HTML预览渲染失败');
             }
         }
     }
     
+
     /**
-     * 刷新预览
+     * 监控iframe性能
+     * @param {HTMLIFrameElement} iframe - iframe元素 
+     */
+    monitorIframePerformance(iframe) {
+        // 创建性能监控定时器
+        if (this._performanceMonitor) {
+            clearInterval(this._performanceMonitor);
+        }
+        
+        let heavyFrameCount = 0;
+        const maxHeavyFrames = 3;
+        
+        this._performanceMonitor = setInterval(() => {
+            try {
+                // 检测iframe是否已经加载完成
+                if (!iframe.contentWindow || !iframe.contentDocument) {
+                    return;
+                }
+                
+                // 检测主线程阻塞
+                const startTime = performance.now();
+                setTimeout(() => {
+                    const endTime = performance.now();
+                    const blockTime = endTime - startTime;
+                    
+                    // 如果主线程被阻塞超过200ms，认为性能有问题
+                    if (blockTime > 200) {
+                        heavyFrameCount++;
+                        
+                        if (heavyFrameCount >= maxHeavyFrames) {
+                            // 尝试让iframe中的内容暂停动画
+                            try {
+                                if (iframe.contentWindow && typeof iframe.contentWindow.postMessage === 'function') {
+                                    iframe.contentWindow.postMessage({ action: 'pauseAnimations' }, '*');
+                                }
+                            } catch (e) {}
+                            
+                            // 显示性能警告
+                            if (window.toast) {
+                                window.toast.warning('预览内容性能较差，已尝试优化');
+                            }
+                            
+                            // 清除监控器
+                            clearInterval(this._performanceMonitor);
+                        }
+                    } else {
+                        // 如果性能恢复，减少计数
+                        heavyFrameCount = Math.max(0, heavyFrameCount - 1);
+                    }
+                }, 0);
+            } catch (e) {
+                // 忽略跨域错误等
+                clearInterval(this._performanceMonitor);
+            }
+        }, 2000);
+    }
+    
+    /**
+     * 刷新预览内容
      */
     refreshPreview() {
-        if (this.isShowing && this.currentHtml) {
-            this.showPreview(this.currentHtml);
+        if (!this.currentHtml) {
+            return;
+        }
+        
+        // 简单地再次调用showPreview方法，使用存储的HTML内容
+        // 利用blob URL方式避免了重复声明变量的问题
+        this.showPreview(this.currentHtml);
+        
+        // 显示刷新提示
+        if (window.toast) {
+            window.toast.info('预览已刷新');
         }
     }
     
@@ -295,12 +370,37 @@ export class HtmlPreview {
                 previewContent.style.right = '';
                 previewContent.style.top = '';
                 previewContent.style.bottom = '';
-                            }
+            }
                     
             // 重置iframe高度
             const iframe = document.getElementById('html-preview-frame');
             if (iframe) {
                 iframe.style.height = '';
+                
+                // 清理blob URL
+                if (iframe._blobUrl) {
+                    URL.revokeObjectURL(iframe._blobUrl);
+                    iframe._blobUrl = null;
+                }
+                
+                // 停止iframe内容中的所有动画
+                try {
+                    if (iframe.contentWindow) {
+                        // 尝试使用postMessage通知iframe停止动画
+                        iframe.contentWindow.postMessage({ action: 'pauseAnimations' }, '*');
+                        
+                        // 尝试清空iframe源
+                        setTimeout(() => {
+                            iframe.src = 'about:blank';
+                        }, 100);
+                    }
+                } catch (e) {}
+            }
+            
+            // 清除性能监控
+            if (this._performanceMonitor) {
+                clearInterval(this._performanceMonitor);
+                this._performanceMonitor = null;
             }
             
             // 重置内容区域高度
@@ -308,7 +408,7 @@ export class HtmlPreview {
             if (contentContainer) {
                 contentContainer.style.maxHeight = '';
             }
-                        }
+        }
     }
     
     // 添加新方法: 切换全屏模式
@@ -334,7 +434,7 @@ export class HtmlPreview {
             // previewContent.style.bottom = '2.5vh';
             
             // 调整iframe高度，让它填充可用空间
-            iframe.style.height = 'calc(95vh - 90px)'; // 保留顶部和底部空间
+            iframe.style.height = '100%'; // 保留顶部和底部空间
          
             // 增加内容区域高度
             if (contentContainer) {

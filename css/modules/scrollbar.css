@@ -1,0 +1,51 @@
+/* 滚动条模块 - 定义全局统一窄滚动条样式 */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(142, 142, 160, 0.3);
+    border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(142, 142, 160, 0.5);
+}
+
+/* 暗色模式滚动条 */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: rgba(170, 170, 190, 0.3);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(170, 170, 190, 0.5);
+}
+
+/* Firefox 滚动条支持 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(142, 142, 160, 0.3) transparent;
+}
+
+[data-theme="dark"] * {
+    scrollbar-color: rgba(170, 170, 190, 0.3) transparent;
+}
+
+/* 特殊区域滚动条保持一致风格 */
+#chatMessages::-webkit-scrollbar,
+.code-block pre::-webkit-scrollbar,
+.markdown-content pre::-webkit-scrollbar,
+#conversationList::-webkit-scrollbar,
+#modelSelect::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+#chatMessages,
+.code-block pre,
+.markdown-content pre,
+#conversationList,
+#modelSelect {
+    scrollbar-width: thin;
+} 

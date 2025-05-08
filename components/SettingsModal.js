@@ -79,11 +79,42 @@ export class SettingsModalComponent {
                             </label>
                         </div>
                         
+                        <div class="flex items-center mt-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="contextToggle" class="sr-only peer" ${this.settingsManager.get('contextEnabled') ? 'checked' : ''}>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-openai-green"></div>
+                                <span class="ml-3 text-sm font-medium text-openai-text dark:text-white">启用上下文（带历史对话）</span>
+                            </label>
+                            <div class="ml-2 group relative">
+                                <i class="fas fa-info-circle text-openai-gray"></i>
+                                <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 w-48">
+                                    关闭此选项可减少发送的上下文，节约token消耗
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="border-t border-openai-border my-4 pt-4">
                             <h4 class="text-md font-semibold text-openai-text dark:text-white mb-4 flex items-center">
                                 <i class="fas fa-sliders-h mr-2 text-openai-gray"></i>
                                 当前对话高级设置
                             </h4>
+                            
+                            <div class="space-y-2 mb-4">
+                                <label class="block text-sm font-medium text-openai-gray">
+                                    对话标题
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <i class="fas fa-heading text-openai-gray"></i>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        id="conversationTitle" 
+                                        class="w-full pl-10 pr-4 py-2 border border-openai-border rounded-md focus:outline-none focus:ring-1 focus:ring-openai-green dark:bg-[#343541] dark:text-white" 
+                                        placeholder="输入对话标题" 
+                                        value="">
+                                </div>
+                            </div>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-2">
@@ -239,19 +270,23 @@ export class SettingsModalComponent {
             const baseUrl = this.modalElement.querySelector('#baseUrl');
             const apiKey = this.modalElement.querySelector('#apiKey');
             const streamToggle = this.modalElement.querySelector('#streamToggle');
+            const contextToggle = this.modalElement.querySelector('#contextToggle');
             
             // 高级设置
             const temperature = this.modalElement.querySelector('#temperature');
             const systemMessage = this.modalElement.querySelector('#systemMessage');
+            const conversationTitle = this.modalElement.querySelector('#conversationTitle');
             
             if (baseUrl instanceof HTMLInputElement && 
                 apiKey instanceof HTMLInputElement && 
-                streamToggle instanceof HTMLInputElement) {
+                streamToggle instanceof HTMLInputElement &&
+                contextToggle instanceof HTMLInputElement) {
                 
                 // 保存全局设置
                 this.settingsManager.set('baseUrl', baseUrl.value);
                 this.settingsManager.set('apiKey', apiKey.value);
                 this.settingsManager.set('streamEnabled', streamToggle.checked);
+                this.settingsManager.set('contextEnabled', contextToggle.checked);
                 
                 // 保存当前对话的高级设置
                 if (this.conversationManager) {
@@ -260,6 +295,16 @@ export class SettingsModalComponent {
                         // 确保配置对象存在
                         if (!currentConversation.config) {
                             currentConversation.config = {};
+                        }
+                        
+                        // 保存对话标题
+                        if (conversationTitle instanceof HTMLInputElement && conversationTitle.value.trim()) {
+                            currentConversation.title = conversationTitle.value.trim();
+                            
+                            // 如果有侧边栏管理器，更新对话列表
+                            if (window.chatUI && window.chatUI.sidebarManager) {
+                                window.chatUI.sidebarManager.renderConversationList();
+                            }
                         }
                         
                         // 获取旧模型ID
@@ -318,6 +363,12 @@ export class SettingsModalComponent {
         const temperatureSlider = this.modalElement.querySelector('#temperature');
         const temperatureValue = this.modalElement.querySelector('#temperatureValue');
         const systemMessage = this.modalElement.querySelector('#systemMessage');
+        const conversationTitle = this.modalElement.querySelector('#conversationTitle');
+        
+        // 设置对话标题
+        if (conversationTitle instanceof HTMLInputElement && currentConversation.title) {
+            conversationTitle.value = currentConversation.title;
+        }
         
         // 设置模型 (使用CustomSelect)
         if (this.modelSelect && currentConversation.config.model) {

@@ -1,0 +1,93 @@
+/* 消息操作按钮模块 - 定义消息底部操作按钮的样式 */
+
+/* 消息操作容器 */
+.message-actions {
+    display: flex !important;
+    gap: 0.25rem;
+    padding: 0.25rem 0;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.chat-start .message-actions {
+    justify-content: flex-start;
+    margin-left: 10px;
+}
+
+.chat-end .message-actions {
+    justify-content: flex-end;
+    margin-right: 10px;
+}
+
+/* 消息操作按钮样式 */
+.message-actions button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px !important;
+    height: 28px !important;
+    background-color: var(--secondary-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 4px !important;
+    color: var(--text-secondary) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: all 0.2s ease !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* 悬停状态 */
+.message-actions button:hover {
+    background-color: var(--tertiary-bg) !important;
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* 激活状态 */
+.message-actions button:active {
+    transform: scale(0.95) !important;
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .message-actions button {
+    background-color: var(--tertiary-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .message-actions button:hover {
+    background-color: rgba(129, 199, 132, 0.1) !important;
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* 按钮图标 */
+.message-actions button i {
+    font-size: 0.875rem !important;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .message-actions {
+        padding: 0.15rem 0;
+    }
+    
+    .message-actions button {
+        width: 24px !important;
+        height: 24px !important;
+    }
+    
+    .message-actions button i {
+        font-size: 0.75rem !important;
+    }
+    
+    .chat-start .message-actions {
+        margin-left: 6px;
+    }
+    
+    .chat-end .message-actions {
+        margin-right: 6px;
+    }
+} 

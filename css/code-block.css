@@ -344,4 +344,132 @@
 [data-theme="dark"] .hljs-selector-id,
 [data-theme="dark"] .hljs-title {
     color: #79c0ff;
+}
+
+/* 代码按钮现代化样式 */
+.code-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #4b5563;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    margin-left: 4px;
+    overflow: hidden;
+}
+
+.code-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.code-btn:active,
+.code-btn-clicked {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.code-btn-clicked::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    animation: ripple 0.5s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
+.copy-btn.copy-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.wrap-btn.code-btn-active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.preview-btn {
+    background-color: #6366f1;
+    color: white;
+}
+
+.preview-btn:hover {
+    background-color: #4f46e5;
+}
+
+/* 按钮提示工具提示 */
+.btn-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background-color: #1f2937;
+    color: white;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.btn-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #1f2937;
+}
+
+.show-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 暗黑模式样式 */
+[data-theme="dark"] .code-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .code-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .copy-btn.copy-success {
+    background-color: #10b981;
+    color: white;
+}
+
+[data-theme="dark"] .code-btn-clicked::before {
+    background-color: rgba(255, 255, 255, 0.2);
 } 

@@ -1,0 +1,302 @@
+/* 代码块模块 - 定义代码块、语法高亮和预览功能的样式 */
+
+/* 代码块基础样式 */
+.code-block {
+    background-color: var(--tertiary-bg);
+    border-radius: 0.375rem;
+    margin: 1rem 0;
+    border: 1px solid var(--border-color);
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 100%;
+    overflow: hidden; /* 确保容器不溢出 */
+}
+
+[data-theme="dark"] .code-block {
+    background-color: var(--secondary-bg);
+    border-color: var(--border-color);
+}
+
+.code-block pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto; /* 只允许pre内部滚动 */
+    max-width: 100%;
+}
+
+.code-block code {
+    width: max-content; /* 允许代码内容自然扩展 */
+    min-width: 100%; /* 确保至少与父容器一样宽 */
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .code-block code {
+    color: var(--text-primary);
+}
+
+/* 代码块头部样式 */
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: rgba(0,0,0,0.05);
+    border-bottom: 1px solid var(--border-color);
+    font-family: var(--mono-font);
+    font-size: 0.85rem;
+}
+
+[data-theme="dark"] .code-header {
+    background-color: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.code-header .left-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.code-header .right-buttons {
+    display: flex;
+    align-items: center;
+}
+
+/* 语言标签样式 */
+.code-header span {
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: var(--background-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+}
+
+[data-theme="dark"] .code-header span {
+    color: var(--text-secondary);
+    background-color: var(--tertiary-bg);
+}
+
+/* 代码块按钮样式 */
+.code-block button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+    height: 1.5rem;
+}
+
+.code-block button:hover {
+    color: var(--primary-dark);
+    background-color: rgba(46, 125, 50, 0.1);
+    border-radius: 0.25rem;
+}
+
+[data-theme="dark"] .code-block button {
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .code-block button:hover {
+    color: var(--primary-dark);
+    background-color: rgba(129, 199, 132, 0.1);
+}
+
+/* 代码块按钮统一样式 */
+.preview-button,
+.source-button,
+.refresh-button,
+.copy-button,
+.wrap-button {
+    background: none !important;
+    border: none !important;
+    color: var(--primary-color) !important;
+    cursor: pointer !important;
+    font-size: 0.75rem !important;
+    padding: 0.25rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    transition: all 0.2s !important;
+    margin-right: 0.5rem !important;
+    vertical-align: middle !important;
+    height: 1.5rem !important;
+}
+
+.preview-button:hover,
+.source-button:hover,
+.refresh-button:hover,
+.copy-button:hover,
+.wrap-button:hover {
+    color: var(--primary-dark) !important;
+    background-color: rgba(46, 125, 50, 0.1) !important;
+    border-radius: 0.25rem !important;
+}
+
+[data-theme="dark"] .preview-button,
+[data-theme="dark"] .source-button,
+[data-theme="dark"] .refresh-button,
+[data-theme="dark"] .copy-button,
+[data-theme="dark"] .wrap-button {
+    color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .preview-button:hover,
+[data-theme="dark"] .source-button:hover,
+[data-theme="dark"] .refresh-button:hover,
+[data-theme="dark"] .copy-button:hover,
+[data-theme="dark"] .wrap-button:hover {
+    color: var(--primary-dark) !important;
+    background-color: rgba(129, 199, 132, 0.1) !important;
+}
+
+/* 复制成功状态 */
+.code-block .copied {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.code-block .copied:hover {
+    background-color: var(--primary-dark);
+}
+
+/* 换行模式 */
+.code-block.wrap-code pre code {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* HTML预览容器 */
+.html-preview-container {
+    position: relative;
+    height: 500px;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    transition: all 0.3s ease;
+    margin-top: 0;
+    border: 1px solid var(--border-color);
+    background-color: white;
+}
+
+[data-theme="dark"] .html-preview-container {
+    border-color: var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    background-color: var(--background-color);
+}
+
+.html-preview-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background-color: white;
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .html-preview-container iframe {
+    background-color: var(--background-color);
+}
+
+/* 在生成过程中的代码块样式 */
+.isGenerating .code-block {
+    max-height: none !important;
+    overflow: visible !important;
+    transition: none !important;
+    min-width: 80% !important; /* 设置最小宽度防止挤压 */
+}
+
+.isGenerating pre {
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: pre-wrap !important;
+}
+
+.isGenerating .markdown-content pre {
+    overflow: visible !important;
+}
+
+/* 在生成过程中隐藏代码块按钮 */
+.isGenerating .code-header .flex {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: none !important;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    /* 确保代码块不会水平溢出 */
+    .markdown-content pre {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+    }
+    
+    .code-block {
+        max-width: 100% !important;
+    }
+    
+    /* 减小代码块内部的填充 */
+    .code-block pre {
+        padding: 0.5rem !important;
+    }
+    
+    /* 优化代码块头部 */
+    .code-header {
+        padding: 0.35rem 0.5rem !important;
+    }
+    
+    /* 减小按钮之间的间距 */
+    .code-header .right-buttons {
+        gap: 0.25rem !important;
+    }
+    
+    /* 减小代码块按钮大小 */
+    .preview-button,
+    .source-button,
+    .refresh-button,
+    .copy-button,
+    .wrap-button {
+        margin-right: 0.2rem !important;
+        font-size: 0.7rem !important;
+        padding: 0.15rem !important;
+        height: 1.2rem !important;
+    }
+    
+    /* 修复代码显示问题 */
+    .markdown-content code {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0.1rem 0.2rem !important; /* 减小内边距 */
+    }
+    
+    /* 代码块内的代码特殊处理 */
+    .markdown-content pre code {
+        width: auto !important;
+        padding: 0.25rem !important;
+        font-size: 0.8rem !important; /* 减小字体大小 */
+    }
+    
+    /* 内联代码样式 */
+    .markdown-content :not(pre) > code {
+        white-space: normal !important;
+        word-break: break-all !important;
+        font-size: 0.85rem !important; /* 减小字体大小 */
+    }
+    
+    /* 确保所有语法高亮元素不溢出 */
+    .hljs {
+        word-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        max-width: 100% !important;
+    }
+} 

@@ -16,7 +16,7 @@ export class Toast {
         // 创建Toast容器
         this.toastContainer = document.createElement('div');
         this.toastContainer.id = 'toast-container';
-        this.toastContainer.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2';
+        this.toastContainer.className = 'fixed top-12 right-4 z-50 flex flex-col gap-2';
         document.body.appendChild(this.toastContainer);
     }
     

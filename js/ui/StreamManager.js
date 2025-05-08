@@ -34,13 +34,7 @@ export class StreamManager {
         if (isGenerating) {
             document.body.classList.add('isGenerating');
             
-            // 处理代码块样式 - 生成开始
-            document.querySelectorAll('pre').forEach(pre => {
-                pre.setAttribute('data-generating', 'true');
-                pre.style.maxHeight = 'none';
-                pre.style.overflowY = 'hidden';
-                pre.style.minHeight = '100px';
-            });
+            // 初始阶段不做任何代码块样式修改，等有活动消息ID时再修改
         } else {
             // 处理完成后更新所有代码块 
             document.body.classList.remove('isGenerating');
@@ -50,13 +44,23 @@ export class StreamManager {
                 window.codeBlockManager.updateExistingCodeBlocksScroll();
             }
             
-            // 修改所有代码块状态 - 生成结束
-            document.querySelectorAll('pre').forEach(pre => {
-                pre.setAttribute('data-generating', 'false');
-                pre.style.maxHeight = '400px';
-                pre.style.overflowY = 'auto';
-                pre.style.removeProperty('min-height');
-            });
+            // 如果当前存在消息ID，只处理该消息中的代码块
+            if (this.streamAnimationData && this.streamAnimationData.messageId) {
+                // 获取消息元素
+                const messageElement = document.getElementById(this.streamAnimationData.messageId);
+                if (messageElement) {
+                    // 移除消息元素的生成中标记
+                    messageElement.setAttribute('data-generating', 'false');
+                    
+                    // 只修改当前活动消息中的代码块
+                    messageElement.querySelectorAll('pre').forEach(pre => {
+                        pre.setAttribute('data-generating', 'false');
+                        pre.style.maxHeight = '400px';
+                        pre.style.overflowY = 'auto';
+                        pre.style.removeProperty('min-height');
+                    });
+                }
+            }
         }
     }
     
@@ -93,6 +97,21 @@ export class StreamManager {
                 renderedIndex: 0,        // 已渲染的字符索引
                 needsRerender: false     // 是否需要完全重渲染
             };
+            
+            // 仅为当前消息设置代码块样式
+            const messageElement = document.getElementById(messageId);
+            if (messageElement) {
+                // 为消息元素添加正在生成的标记
+                messageElement.setAttribute('data-generating', 'true');
+                
+                // 设置代码块样式
+                messageElement.querySelectorAll('pre').forEach(pre => {
+                    pre.setAttribute('data-generating', 'true');
+                    pre.style.maxHeight = 'none';
+                    pre.style.overflowY = 'hidden';
+                    pre.style.minHeight = '100px';
+                });
+            }
         }
         
         // 检测内容变化量
@@ -146,141 +165,156 @@ export class StreamManager {
     }
     
     /**
-     * 逐字动画显示文本的函数
+     * 执行流式文本动画
      */
     animateText() {
-        // 确保流式动画数据存在
+        // 确保streamAnimationData存在
         if (!this.streamAnimationData) return;
         
-        // 获取内容元素
+        // 获取消息内容元素
         const contentElement = document.getElementById(`content-${this.streamAnimationData.messageId}`);
         if (!contentElement) {
+            // 如果无法找到内容元素，停止动画
             this.streamAnimationData.isAnimating = false;
             return;
         }
         
-        const now = performance.now();
-        
-        // 动态调整渲染频率 - 对于长文本可以降低频率以提高性能
-        const contentLength = this.streamAnimationData.rawTextContent.length;
-        let frameInterval = 16; // 默认约60fps
-        
-        if (contentLength > 10000) {
-            frameInterval = 30; // 长文本降低到30fps
-        } else if (contentLength > 5000) {
-            frameInterval = 24; // 中等长度文本降低到40fps
-        }
-        
-        // 控制动画速度
-        if (now - this.streamAnimationData.lastUpdateTime < frameInterval) { 
-            requestAnimationFrame(() => this.animateText());
+        // 如果此时动画结束，退出
+        if (!this.streamAnimationData.isAnimating) {
             return;
         }
         
+        // 获取文本内容长度
+        const contentLength = this.streamAnimationData.rawTextContent.length;
+        
+        // 确保滚动到底部
+        this.scrollToBottom();
+        
+        // 根据剩余文本长度动态调整渲染速度
+        let frameInterval = 16; // 1000ms / 60fps ≈ 16.7ms
+        
+        // 防止过于频繁的DOM更新
+        const now = Date.now();
+        if (!this.streamAnimationData.lastUpdateTime) {
+            this.streamAnimationData.lastUpdateTime = now - frameInterval;
+        }
+        
+        // 限制帧率，避免性能问题
+        if (now - this.streamAnimationData.lastUpdateTime < frameInterval) {
+            // 如果还在动画中，请求下一帧
+            if (this.streamAnimationData.isAnimating) {
+                requestAnimationFrame(() => this.animateText());
+            }
+            return;
+        }
         this.streamAnimationData.lastUpdateTime = now;
-
+        
         // 移除所有现有光标以避免多个光标
         const existingCursors = contentElement.querySelectorAll('.cursor-blink');
         existingCursors.forEach(cursor => cursor.remove());
         
-        // 检查是否需要完全重渲染（遇到特殊格式时）
-        const isSpecialFormat = this.streamAnimationData.rawTextContent.includes('```') || 
-                               this.streamAnimationData.rawTextContent.includes('![') ||
-                               this.streamAnimationData.rawTextContent.endsWith('*') ||
-                               this.streamAnimationData.rawTextContent.endsWith('_') ||
-                               this.streamAnimationData.rawTextContent.endsWith('`');
+        // 检查特殊格式，如代码块、图片链接等需要完全渲染的情况
+        const isSpecialFormat = this.streamAnimationData && (
+            this.streamAnimationData.rawTextContent.includes('```') ||
+            this.streamAnimationData.rawTextContent.includes('![') ||
+            this.streamAnimationData.rawTextContent.endsWith('*') ||
+            this.streamAnimationData.rawTextContent.endsWith('_') ||
+            this.streamAnimationData.rawTextContent.endsWith('`')
+        );
         
-        // 检测是否正在渲染代码块
-        const isInCodeBlock = /```[\s\S]*?$/.test(
-            this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex)
-        ) && !this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex).endsWith('```');
+        // 检查是否有未完成的代码块
+        const hasUncompletedCodeBlock = (
+            this.streamAnimationData && 
+            this.streamAnimationData.rawTextContent.includes('```') && 
+            this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex) && 
+            !this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex).endsWith('```')
+        );
         
-        if (isSpecialFormat || this.streamAnimationData.needsRerender) {
-            // 对于特殊格式，完全重新渲染以确保正确格式化
+        // 处理特殊格式或需要重新渲染的情况
+        if ((isSpecialFormat || (this.streamAnimationData && this.streamAnimationData.needsRerender)) && this.streamAnimationData) {
+            // 标记已重新渲染
             this.streamAnimationData.needsRerender = false;
             
-            // 根据内容类型调整渲染速度
+            // 更快地渲染特殊格式
             let charsToAdd = isSpecialFormat ? 5 : this.streamAnimationData.charsPerFrame;
             
-            // 在代码块内部加快渲染速度
-            if (isInCodeBlock) {
-                charsToAdd = Math.max(10, charsToAdd * 2);
+            // 确保代码块能够快速完整渲染
+            if (hasUncompletedCodeBlock) {
+                // 查找未完成代码块的结束位置
+                const codeBlockStart = this.streamAnimationData.rawTextContent.lastIndexOf('```', this.streamAnimationData.renderedIndex);
+                if (codeBlockStart !== -1) {
+                    const codeBlockEnd = this.streamAnimationData.rawTextContent.indexOf('```', codeBlockStart + 3);
+                    if (codeBlockEnd !== -1 && codeBlockEnd > this.streamAnimationData.renderedIndex) {
+                        // 快速渲染到代码块结束
+                        charsToAdd = codeBlockEnd + 3 - this.streamAnimationData.renderedIndex;
+                    }
+                }
             }
             
-            // 增加渲染索引
-            this.streamAnimationData.renderedIndex += charsToAdd;
-            
-            // 如果是代码块结束，立即渲染整个内容
-            if (this.streamAnimationData.rawTextContent.endsWith('```')) {
-                this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
+            // 更新已渲染的字符索引
+            if (this.streamAnimationData) {
+                this.streamAnimationData.renderedIndex += charsToAdd;
+                
+                // 对于以```结尾的代码块，直接显示完整内容
+                if (this.streamAnimationData.rawTextContent.endsWith('```')) {
+                    this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
+                }
+                
+                // 确保不超过内容长度
+                if (this.streamAnimationData.renderedIndex > this.streamAnimationData.rawTextContent.length) {
+                    this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
+                }
+                
+                // 获取部分文本并格式化显示
+                const partialText = this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex);
+                contentElement.innerHTML = this.chatComponent.formatter.formatMessage(partialText);
+                
+                // 定期应用代码高亮，减轻性能负担
+                if (this.streamAnimationData.renderedIndex % 20 === 0 ||
+                    this.streamAnimationData.renderedIndex === this.streamAnimationData.rawTextContent.length) {
+                    this.chatComponent.applyCodeHighlightingToElement(contentElement.closest('.chat'));
+                }
             }
-            
-            // 限制索引不超过内容长度
-            if (this.streamAnimationData.renderedIndex > this.streamAnimationData.rawTextContent.length) {
-                this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
-            }
-            
-            // 截取到当前索引的内容
-            const partialText = this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex);
-            
-            // 格式化并显示
-            contentElement.innerHTML = this.chatComponent.formatter.formatMessage(partialText);
-            
-            if (this.streamAnimationData.renderedIndex % 20 === 0 || 
-                this.streamAnimationData.renderedIndex === this.streamAnimationData.rawTextContent.length) {
-            }
-        } else {
-            // 增加渲染索引 - 普通文本时使用动态渲染速度
-            // 根据剩余内容长度动态调整速度 - 内容越长，速度越快
+        } else if (this.streamAnimationData) {
+            // 标准文本逐字渲染
             const remainingChars = this.streamAnimationData.rawTextContent.length - this.streamAnimationData.renderedIndex;
             let charsPerFrame = this.streamAnimationData.charsPerFrame;
             
-            // 动态调整速度 - 使渲染速度更自然
-            if (remainingChars > 2000) {
-                charsPerFrame = Math.min(30, Math.max(15, Math.floor(remainingChars / 100))); // 非常长的内容，快速渲染
+            // 根据剩余字符动态调整速度
+            if (remainingChars < 100) {
+                // 接近结尾时放慢速度
+                charsPerFrame = Math.max(1, Math.min(charsPerFrame, Math.ceil(remainingChars / 20)));
             } else if (remainingChars > 1000) {
-                charsPerFrame = 10; // 长内容
-            } else if (remainingChars > 500) {
-                charsPerFrame = 6;  // 中等内容
-            } else if (remainingChars > 200) {
-                charsPerFrame = 3;  // 较短内容
-            } else {
-                // 最后一点内容减慢速度，增强用户体验
-                charsPerFrame = remainingChars > 50 ? 2 : 1;
+                // 对于长文本加速
+                charsPerFrame = Math.min(20, charsPerFrame * 1.5);
             }
             
-            // 避免速度过快引起的闪烁，当剩余字符较少时平滑减速
-            if (remainingChars < 100 && charsPerFrame > 1) {
+            // 避免在通常的阅读位置（句末）过快
+            const nextChar = this.streamAnimationData.rawTextContent.charAt(this.streamAnimationData.renderedIndex);
+            if ('.!?。！？'.includes(nextChar)) {
+                // 句子结束时短暂放慢一点
                 charsPerFrame = Math.max(1, charsPerFrame / 2);
             }
             
+            // 更新已渲染的字符索引
             this.streamAnimationData.renderedIndex += charsPerFrame;
             
-            // 限制索引不超过内容长度
+            // 确保不超过内容长度
             if (this.streamAnimationData.renderedIndex > this.streamAnimationData.rawTextContent.length) {
                 this.streamAnimationData.renderedIndex = this.streamAnimationData.rawTextContent.length;
             }
             
-            // 截取到当前索引的内容并显示
+            // 获取部分文本并格式化显示
             const partialText = this.streamAnimationData.rawTextContent.substring(0, this.streamAnimationData.renderedIndex);
-            
-            // 为简单文本使用更高效的渲染方式
             contentElement.innerHTML = this.chatComponent.formatter.formatMessage(partialText);
             
-            if (this.streamAnimationData.renderedIndex % 50 === 0 || 
+            // 定期应用代码高亮，减轻性能负担
+            if (this.streamAnimationData.renderedIndex % 50 === 0 ||
                 this.streamAnimationData.renderedIndex === this.streamAnimationData.rawTextContent.length) {
+                this.chatComponent.applyCodeHighlightingToElement(contentElement.closest('.chat'));
             }
         }
 
-        // 如果动画仍在进行且未完成，添加光标
-        if (this.streamAnimationData.isAnimating && 
-            this.streamAnimationData.renderedIndex < this.streamAnimationData.rawTextContent.length) {
-            // 添加光标
-            const cursorElement = document.createElement('span');
-            cursorElement.className = 'cursor-blink';
-            contentElement.appendChild(cursorElement);
-        }
-        
         // 如果特殊格式标记或代码块开始，设置标记以进行完全重渲染
         if (this.streamAnimationData.rawTextContent.substr(this.streamAnimationData.renderedIndex - 3, 3) === '```' ||
             this.streamAnimationData.rawTextContent.substr(this.streamAnimationData.renderedIndex - 2, 2) === '![') {
@@ -288,23 +322,30 @@ export class StreamManager {
         }
         
         // 检查动画是否完成
-        if (this.streamAnimationData.renderedIndex >= this.streamAnimationData.rawTextContent.length) {
+        if (this.streamAnimationData && this.streamAnimationData.renderedIndex >= this.streamAnimationData.rawTextContent.length) {
             
             // 添加轻微延迟，确保最后部分内容有时间显示
             setTimeout(() => {
-                // 确保显示完整内容
-                if (this.streamAnimationData.fullContent !== this.streamAnimationData.rawTextContent) {
-                    contentElement.innerHTML = this.chatComponent.formatter.formatMessage(this.streamAnimationData.fullContent);
-                }
-                
-                // 移除所有光标元素
-                document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
-                
-                this.streamAnimationData.isAnimating = false;
-                
-                // 如果有完成回调，调用它
-                if (this.onAnimationComplete && typeof this.onAnimationComplete === 'function') {
-                    this.onAnimationComplete(this.streamAnimationData.messageId, this.streamAnimationData.fullContent);
+                // 确保流数据仍然存在（可能在延迟期间被外部清除）
+                if (this.streamAnimationData) {
+                    // 确保显示完整内容
+                    if (this.streamAnimationData.fullContent !== this.streamAnimationData.rawTextContent) {
+                        contentElement.innerHTML = this.chatComponent.formatter.formatMessage(this.streamAnimationData.fullContent);
+                    }
+                    
+                    // 保存最终消息ID和内容，因为我们即将清除streamAnimationData
+                    const messageId = this.streamAnimationData.messageId;
+                    const finalContent = this.streamAnimationData.fullContent;
+                    
+                    // 移除所有光标元素
+                    document.querySelectorAll(`#${messageId} .cursor-blink`).forEach(el => el.remove());
+                    
+                    this.streamAnimationData.isAnimating = false;
+                    
+                    // 如果有完成回调，调用它
+                    if (this.onAnimationComplete && typeof this.onAnimationComplete === 'function') {
+                        this.onAnimationComplete(messageId, finalContent);
+                    }
                 }
             }, 50);
             
@@ -312,11 +353,13 @@ export class StreamManager {
         }
         
         // 请求下一帧动画
-        if (this.streamAnimationData.isAnimating) {
+        if (this.streamAnimationData && this.streamAnimationData.isAnimating) {
             requestAnimationFrame(() => this.animateText());
         } else {
             // 如果动画被外部停止，确保删除所有光标
-            document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
+            if (this.streamAnimationData && this.streamAnimationData.messageId) {
+                document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
+            }
         }
     }
     
@@ -512,13 +555,18 @@ export class StreamManager {
             window.codeBlockManager.updateExistingCodeBlocksScroll();
         }
 
-        // 修改所有代码块状态
-        document.querySelectorAll('pre').forEach(pre => {
-            pre.setAttribute('data-generating', 'false');
-            pre.style.maxHeight = '400px';
-            pre.style.overflowY = 'auto';
-            pre.style.removeProperty('min-height');
-        });
+        // 只修改当前消息中的代码块状态
+        if (messageElement) {
+            // 移除消息元素的生成标记
+            messageElement.removeAttribute('data-generating');
+            
+            messageElement.querySelectorAll('pre').forEach(pre => {
+                pre.setAttribute('data-generating', 'false');
+                pre.style.maxHeight = '400px';
+                pre.style.overflowY = 'auto';
+                pre.style.removeProperty('min-height');
+            });
+        }
     }
     
     /**

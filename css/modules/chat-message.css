@@ -1,0 +1,173 @@
+/* 聊天消息模块 - 定义聊天消息、气泡和布局样式 */
+
+/* 聊天消息容器 */
+.chat {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+    position: relative;
+    max-width: 100%; /* 限制最大宽度 */
+    overflow-wrap: break-word; /* 确保文本换行 */
+    width: 100%; /* 确保宽度100% */
+}
+
+.chat-start {
+    align-items: flex-start;
+}
+
+.chat-end {
+    align-items: flex-end;
+}
+
+/* 聊天行布局 */
+.chat-row {
+    display: flex;
+    max-width: 90%; /* 增加最大宽度 */
+    align-items: flex-end;
+    width: auto; /* 改为自动宽度 */
+    box-sizing: border-box; /* 添加盒模型控制 */
+}
+
+.chat-start .chat-row {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.chat-end .chat-row {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+/* 聊天气泡 */
+.chat-bubble {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow-x: hidden; /* 防止水平溢出 */
+    width: 100%; /* 确保宽度100% */
+    box-sizing: border-box; /* 添加盒模型控制 */
+}
+
+/* 头像样式 */
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* 防止头像被压缩 */
+}
+
+.chat-start .avatar {
+    margin-right: 8px;
+}
+
+.chat-end .avatar {
+    margin-left: 8px;
+    margin-right: 0;
+}
+
+/* 消息内容样式 */
+.message-content {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    width: auto; /* 改为自动宽度 */
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem; /* 统一内边距 */
+}
+
+.chat-start .message-content {
+    border-bottom-left-radius: 0.25rem;
+    background-color: var(--tertiary-bg);
+    color: var(--text-primary);
+}
+
+.chat-end .message-content {
+    border-bottom-right-radius: 0.25rem;
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+/* 暗色模式下的消息样式 */
+[data-theme="dark"] .chat-start .message-content {
+    background-color: var(--tertiary-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .chat-end .message-content {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+    border: 1px solid rgba(129, 199, 132, 0.3);
+}
+
+/* 欢迎消息样式 */
+.welcome-message {
+    margin: 2rem auto;
+    max-width: 800px;
+    color: var(--text-primary);
+}
+
+.welcome-message p {
+    color: var(--text-secondary);
+}
+
+.welcome-message .bg-gray-50 {
+    background-color: var(--tertiary-bg);
+    border-color: var(--border-color);
+}
+
+/* AI消息内容背景覆盖 */
+.bg-gray-100.dark\:bg-gray-700 {
+    background-color: var(--tertiary-bg) !important;
+}
+
+[data-theme="dark"] .bg-gray-100.dark\:bg-gray-700 {
+    background-color: var(--tertiary-bg) !important;
+    border: 1px solid var(--border-color);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    /* 减小头像大小 */
+    .avatar {
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+    }
+    
+    /* 优化消息气泡布局 */
+    .chat-row {
+        max-width: 95% !important; /* 增加最大宽度 */
+        width: auto !important; /* 改为自动宽度 */
+        margin: 0 4px !important; /* 减小边距 */
+    }
+    
+    /* 消息内容占满屏幕 */
+    .message-content {
+        max-width: 100% !important;
+        width: auto !important; /* 改为自动宽度 */
+        box-sizing: border-box !important;
+        padding: 0.75rem 0.5rem !important; /* 减小左右内边距 */
+    }
+    
+    /* 减少头像和气泡的间距 */
+    .chat-start .avatar {
+        margin-right: 4px !important;
+    }
+    
+    .chat-end .avatar {
+        margin-left: 4px !important;
+    }
+    
+    /* 减小消息间距 */
+    #chatMessages {
+        gap: 0.5rem !important;
+    }
+    
+    /* 聊天框内容内部间距优化 */
+    .chat-bubble {
+        padding: 0 !important;
+        width: auto !important; /* 改为自动宽度 */
+        box-sizing: border-box !important;
+    }
+} 

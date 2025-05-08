@@ -54,13 +54,111 @@ export class ApiClient {
         // 应用会话特定的配置
         const temperature = config.temperature !== undefined ? config.temperature : 0.7;
         
-        // 添加系统消息
-        const finalMessages = [...messages];
+        // 检查是否启用上下文
+        const contextEnabled = this.settingsManager.get('contextEnabled', true);
+        console.log('API非流式请求 - 上下文启用状态:', contextEnabled, '类型:', typeof contextEnabled);
+        
+        // 构建最终消息数组
+        let finalMessages = [];
+        
+        // 系统消息始终添加（如果有）
         if (config.systemMessage) {
-            finalMessages.unshift({
+            finalMessages.push({
                 role: 'system',
                 content: config.systemMessage
             });
+        }
+        
+        // 根据上下文设置决定是否添加历史消息
+        const shouldUseContext = contextEnabled !== false; // 将字符串'false'也处理为布尔false
+        
+        if (shouldUseContext) {
+            // 上下文开启：添加断点之后的历史对话，过滤掉空内容
+            if (this.conversationManager) {
+                const messagesAfterBreakpoint = this.conversationManager.getMessagesAfterBreakpoint();
+                const formattedMessages = messagesAfterBreakpoint.map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                })).filter(msg => 
+                    msg.content !== '' && 
+                    ['user', 'assistant', 'system'].includes(msg.role) && 
+                    !msg.isBreakpoint && 
+                    !msg.type
+                );
+                
+                finalMessages = [...finalMessages, ...formattedMessages];
+                console.log("上下文已开启，使用断点后的历史消息:", finalMessages.length);
+            } else {
+                // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
+                finalMessages = [...finalMessages, ...messages.filter(msg => 
+                    msg.content !== '' && 
+                    ['user', 'assistant', 'system'].includes(msg.role)
+                )];
+                console.log("上下文已开启，使用全部历史消息:", finalMessages.length);
+            }
+        } else {
+            // 上下文关闭：只添加最后一条用户消息
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === 'user' && messages[i].content !== '') {
+                    finalMessages.push(messages[i]);
+                    break;
+                }
+            }
+            console.log("上下文已关闭，只发送最后一条用户消息:", finalMessages.length);
+            
+            // 当关闭上下文时，记录当前位置为新的断点
+            if (this.conversationManager) {
+                // 设置断点并获取是否成功
+                const breakpointSet = this.conversationManager.setContextBreakpoint();
+                
+                // 如果成功设置断点且在浏览器环境中，立即显示断点标记
+                // 不再检查是否正在生成，直接显示断点
+                if (breakpointSet && typeof window !== 'undefined' && window.chatUI) {
+                    // 获取当前用户消息所在位置，准备在其上方插入断点
+                    const latestBreakpoint = Math.max(...this.conversationManager.getBreakpoints());
+                    
+                    // 在UI中直接添加断点标记
+                    if (window.chatUI.chatMessages) {
+                        // 创建断点元素
+                        const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
+                        
+                        // 找到用户刚发送的消息元素
+                        const userMessages = window.chatUI.chatMessages.querySelectorAll('.chat-end');
+                        if (userMessages.length > 0) {
+                            const latestUserMsg = userMessages[userMessages.length - 1];
+                            // 在最新的用户消息前插入断点
+                            latestUserMsg.parentNode.insertBefore(breakpointElement, latestUserMsg);
+                        } else {
+                            // 如果找不到用户消息，添加到消息区域末尾
+                            window.chatUI.chatMessages.appendChild(breakpointElement);
+                        }
+                        
+                        // 绑定断点删除事件
+                        window.chatUI.bindBreakpointDeleteEvents();
+                    }
+                }
+            }
+        }
+        
+        // 确保消息序列有效（系统消息之后的第一条消息必须是用户消息）
+        if (finalMessages.length > 0) {
+            // 获取第一个非系统消息的索引
+            const firstNonSystemIndex = finalMessages.findIndex(msg => msg.role !== 'system');
+            
+            if (firstNonSystemIndex !== -1 && firstNonSystemIndex < finalMessages.length) {
+                // 如果第一个非系统消息不是用户消息，需要进行调整
+                if (finalMessages[firstNonSystemIndex].role !== 'user') {
+                    // 找到第一个用户消息
+                    const firstUserIndex = finalMessages.findIndex(msg => msg.role === 'user');
+                    
+                    if (firstUserIndex !== -1 && firstUserIndex > firstNonSystemIndex) {
+                        // 保留系统消息和从第一个用户消息开始的所有消息
+                        const systemMessages = finalMessages.filter((msg, idx) => msg.role === 'system' && idx < firstUserIndex);
+                        finalMessages = [...systemMessages, ...finalMessages.slice(firstUserIndex)];
+                        console.log("已调整消息顺序，确保首条非系统消息是用户消息");
+                    }
+                }
+            }
         }
         
         const response = await fetch(`${baseUrl}/v1/chat/completions`, {
@@ -135,14 +233,117 @@ export class ApiClient {
             // 应用会话特定的配置
             const temperature = config.temperature !== undefined ? config.temperature : 0.7;
             
-            // 添加系统消息
-            const finalMessages = [...messages];
+            // 检查是否启用上下文
+            const contextEnabled = this.settingsManager.get('contextEnabled', true);
+            
+            // 添加调试日志
+            console.log('API上下文设置原始值:', localStorage.getItem('context_enabled'));
+            console.log('API上下文启用状态:', contextEnabled, '类型:', typeof contextEnabled);
+            
+            // 构建最终消息数组
+            let finalMessages = [];
+            
+            // 系统消息始终添加（如果有）
             if (config.systemMessage) {
-                finalMessages.unshift({
+                finalMessages.push({
                     role: 'system',
                     content: config.systemMessage
                 });
             }
+            
+            // 根据上下文设置决定是否添加历史消息
+            const shouldUseContext = contextEnabled !== false; // 将字符串'false'也处理为布尔false
+            
+            if (shouldUseContext) {
+                // 上下文开启：添加断点之后的历史对话，过滤掉空内容
+                if (this.conversationManager) {
+                    const messagesAfterBreakpoint = this.conversationManager.getMessagesAfterBreakpoint();
+                    const formattedMessages = messagesAfterBreakpoint.map(msg => ({
+                        role: msg.role,
+                        content: msg.content
+                    })).filter(msg => 
+                        msg.content !== '' && 
+                        ['user', 'assistant', 'system'].includes(msg.role) && 
+                        !msg.isBreakpoint && 
+                        !msg.type
+                    );
+                    
+                    finalMessages = [...finalMessages, ...formattedMessages];
+                    console.log("上下文已开启，使用断点后的历史消息:", finalMessages.length);
+                } else {
+                    // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
+                    finalMessages = [...finalMessages, ...messages.filter(msg => 
+                        msg.content !== '' && 
+                        ['user', 'assistant', 'system'].includes(msg.role)
+                    )];
+                    console.log("上下文已开启，使用全部历史消息:", finalMessages.length);
+                }
+            } else {
+                // 上下文关闭：只添加最后一条用户消息
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].role === 'user' && messages[i].content !== '') {
+                        finalMessages.push(messages[i]);
+                        break;
+                    }
+                }
+                console.log("上下文已关闭，只发送最后一条用户消息:", finalMessages.length);
+                
+                // 当关闭上下文时，记录当前位置为新的断点
+                if (this.conversationManager) {
+                    // 设置断点并获取是否成功
+                    const breakpointSet = this.conversationManager.setContextBreakpoint();
+                    
+                    // 如果成功设置断点且在浏览器环境中，立即显示断点标记
+                    // 不再检查是否正在生成，直接显示断点
+                    if (breakpointSet && typeof window !== 'undefined' && window.chatUI) {
+                        // 获取当前用户消息所在位置，准备在其上方插入断点
+                        const latestBreakpoint = Math.max(...this.conversationManager.getBreakpoints());
+                        
+                        // 在UI中直接添加断点标记
+                        if (window.chatUI.chatMessages) {
+                            // 创建断点元素
+                            const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
+                            
+                            // 找到用户刚发送的消息元素
+                            const userMessages = window.chatUI.chatMessages.querySelectorAll('.chat-end');
+                            if (userMessages.length > 0) {
+                                const latestUserMsg = userMessages[userMessages.length - 1];
+                                // 在最新的用户消息前插入断点
+                                latestUserMsg.parentNode.insertBefore(breakpointElement, latestUserMsg);
+                            } else {
+                                // 如果找不到用户消息，添加到消息区域末尾
+                                window.chatUI.chatMessages.appendChild(breakpointElement);
+                            }
+                            
+                            // 绑定断点删除事件
+                            window.chatUI.bindBreakpointDeleteEvents();
+                        }
+                    }
+                }
+            }
+            
+            // 确保消息序列有效（系统消息之后的第一条消息必须是用户消息）
+            if (finalMessages.length > 0) {
+                // 获取第一个非系统消息的索引
+                const firstNonSystemIndex = finalMessages.findIndex(msg => msg.role !== 'system');
+                
+                if (firstNonSystemIndex !== -1 && firstNonSystemIndex < finalMessages.length) {
+                    // 如果第一个非系统消息不是用户消息，需要进行调整
+                    if (finalMessages[firstNonSystemIndex].role !== 'user') {
+                        // 找到第一个用户消息
+                        const firstUserIndex = finalMessages.findIndex(msg => msg.role === 'user');
+                        
+                        if (firstUserIndex !== -1 && firstUserIndex > firstNonSystemIndex) {
+                            // 保留系统消息和从第一个用户消息开始的所有消息
+                            const systemMessages = finalMessages.filter((msg, idx) => msg.role === 'system' && idx < firstUserIndex);
+                            finalMessages = [...systemMessages, ...finalMessages.slice(firstUserIndex)];
+                            console.log("已调整消息顺序，确保首条非系统消息是用户消息");
+                        }
+                    }
+                }
+            }
+            
+            console.log('发送消息数组:', finalMessages);
             
             // 发起请求
             const response = await fetch(`${baseUrl}/v1/chat/completions`, {

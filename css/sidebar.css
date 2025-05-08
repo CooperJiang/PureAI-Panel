@@ -1,4 +1,78 @@
 /* 侧边栏样式 */
+#sidebar {
+    width: 260px;
+    transition: width 0.3s ease, transform 0.3s ease;
+    z-index: 40;
+}
+
+/* 移动设备侧边栏样式 */
+@media (max-width: 768px) {
+    #sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        height: 100%;
+        width: 260px;
+    }
+    
+    #sidebar.open {
+        left: 0;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* 对话项悬停效果 */
+.conversation-item {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.conversation-item:hover {
+    background-color: var(--tertiary-bg);
+}
+
+.conversation-item.active {
+    background-color: var(--tertiary-bg);
+    border-left: 3px solid var(--primary-color);
+}
+
+/* 改进对话删除按钮样式 */
+.delete-conversation {
+    opacity: 0;
+    transform: translateX(10px);
+    transition: all 0.2s ease;
+}
+
+.conversation-item:hover .delete-conversation {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.delete-conversation:hover {
+    color: #ef4444;
+}
+
+/* 固定对话标记 */
+.pin-indicator {
+    font-size: 0.75rem;
+    color: var(--primary-color);
+}
+
+/* 对话标题截断 */
+.conversation-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+/* 对话时间戳 */
+.conversation-time {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+}
 
 /* 对话项操作按钮 */
 #conversationList .group .flex.opacity-0.group-hover\:opacity-100 {
@@ -22,40 +96,6 @@
 #conversationList .group:hover .flex.opacity-0.group-hover\:opacity-100 button {
     opacity: 1;
     visibility: visible;
-}
-
-.conversation-item {
-    position: relative;
-    border-radius: 8px;
-    margin: 4px 0;
-    transition: all 0.2s ease-in-out;
-    border: 1px solid transparent;
-}
-
-.conversation-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="dark"] .conversation-item:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.conversation-item .delete-conversation-btn {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
-.conversation-item:hover .delete-conversation-btn {
-    display: inline-flex !important;
-    opacity: 1 !important;
-    visibility: visible !important;
 }
 
 .theme-item {
@@ -133,39 +173,20 @@
     background: rgba(142, 142, 160, 0.5);
 }
 
-@media (max-width: 768px) {
-    #sidebar {
-        position: fixed;
-        top: 0;
-        bottom: 0;
-        left: -285px;
-        z-index: 50;
-        width: 280px;
-        overflow-y: auto;
-        transition: left 0.3s;
-        box-shadow: none;
-    }
-    
-    #sidebar.open {
-        left: 0;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .sidebar-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 40;
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-    
-    .sidebar-overlay.active {
-        display: block;
-        opacity: 1;
-    }
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
 } 

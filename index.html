@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI 聊天面板</title>
+    <title>PureAI对话</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
@@ -26,7 +26,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
     
     <!-- 自定义CSS -->
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/style.css">
     
     <script>
         // Tailwind配置
@@ -34,42 +34,34 @@
             theme: {
                 extend: {
                     colors: {
-                        // 主色调 - 更现代的蓝绿色调
-                        'primary': '#0ea5e9',        // 主色
-                        'primary-dark': '#0284c7',   // 主色深色版
-                        'primary-light': '#38bdf8',  // 主色浅色版
+                        // 使用CSS变量来定义颜色，以支持主题切换
+                        'primary': 'var(--primary-color)',
+                        'primary-dark': 'var(--primary-dark)',
+                        'primary-light': 'var(--primary-light)',
                         
-                        // 界面基础色
-                        'surface': '#ffffff',        // 表面色（主要背景）
-                        'surface-hover': '#f1f5f9',  // 表面色悬停状态
-                        'surface-active': '#e2e8f0', // 表面色激活状态
+                        'background': 'var(--background-color)',
+                        'secondary-bg': 'var(--secondary-bg)',
+                        'tertiary-bg': 'var(--tertiary-bg)',
                         
-                        // 界面文字颜色
-                        'text-primary': '#0f172a',   // 主要文字颜色
-                        'text-secondary': '#475569', // 次要文字颜色
-                        'text-muted': '#94a3b8',     // 弱化文字颜色
+                        'txt-primary': 'var(--text-primary)',
+                        'txt-secondary': 'var(--text-secondary)',
+                        'txt-tertiary': 'var(--text-tertiary)',
                         
-                        // 边框和分割线
-                        'border': '#e2e8f0',         // 边框颜色
-                        'border-light': '#f1f5f9',   // 浅色边框
-
-                        // 功能色
-                        'success': '#10b981',        // 成功色
-                        'warning': '#f59e0b',        // 警告色
-                        'error': '#ef4444',          // 错误色
-                        'info': '#3b82f6',           // 信息色
+                        'border-color': 'var(--border-color)',
+                        'divider': 'var(--divider-color)',
                         
                         // 兼容旧代码的颜色映射
-                        'openai-sidebar': '#f8fafc',
-                        'openai-hover': '#f1f5f9',
-                        'openai-border': '#e2e8f0',
-                        'openai-text': '#0f172a',
-                        'openai-gray': '#64748b',
-                        'openai-green': '#0ea5e9',
-                        'openai-button': '#f8fafc',
+                        'openai-sidebar': 'var(--secondary-bg)',
+                        'openai-hover': 'var(--tertiary-bg)',
+                        'openai-border': 'var(--border-color)',
+                        'openai-text': 'var(--text-primary)',
+                        'openai-gray': 'var(--text-secondary)',
+                        'openai-green': 'var(--primary-color)',
                     }
                 }
             },
+            // 启用暗色模式
+            darkMode: 'class',
             // 使用CDN版本的daisyUI
             daisyui: {
                 themes: ["light", "dark"],
@@ -77,12 +69,12 @@
         }
     </script>
 </head>
-<body class="bg-white text-openai-text flex h-screen">
+<body class="bg-background text-txt-primary dark:bg-background flex h-screen">
     <!-- 左侧边栏 - 对话历史 -->
-    <aside class="w-64 bg-openai-sidebar border-r border-openai-border flex-shrink-0 flex flex-col h-full overflow-auto transition-all duration-300" id="sidebar">
+    <aside class="w-64 bg-secondary-bg dark:bg-secondary-bg border-r border-border-color dark:border-border-color flex-shrink-0 flex flex-col h-full overflow-auto transition-all duration-300" id="sidebar">
         <!-- 边栏头部 -->
-        <div class="p-4 border-b border-openai-border">
-            <button id="newChatBtn" class="bg-white text-openai-text hover:bg-openai-hover w-full py-2 px-3 rounded-md border border-openai-border flex items-center justify-between transition-all">
+        <div class="p-4 border-b border-border-color dark:border-border-color">
+            <button id="newChatBtn" class="bg-background dark:bg-secondary-bg text-txt-primary dark:text-txt-primary hover:bg-tertiary-bg dark:hover:bg-tertiary-bg w-full py-2 px-3 rounded-md border border-border-color dark:border-border-color flex items-center justify-between transition-all">
                 <span class="font-medium">新建对话</span>
                 <i class="fas fa-plus text-xs"></i>
             </button>
@@ -90,38 +82,38 @@
         
         <!-- 对话历史列表 -->
         <div class="flex-1 overflow-auto p-2">
-            <div class="text-sm font-medium text-openai-gray uppercase tracking-wider px-2 mb-2">对话历史</div>
+            <div class="text-sm font-medium text-txt-secondary dark:text-txt-secondary uppercase tracking-wider px-2 mb-2">对话历史</div>
             <div id="conversationList" class="space-y-1">
                 <!-- 对话列表由JS填充 -->
             </div>
         </div>
         
         <!-- 边栏底部 -->
-        <div class="p-4 border-t border-openai-border">
+        <div class="p-4 border-t border-border-color dark:border-border-color">
             <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-openai-green flex items-center justify-center text-white">
+                <div class="w-8 h-8 rounded-full bg-primary dark:bg-primary flex items-center justify-center text-white">
                     <i class="fas fa-robot"></i>
                 </div>
                 <div class="ml-2">
-                    <div class="text-sm font-medium">PureAI Panel</div>
-                    <div class="text-xs text-openai-gray">v1.0.0</div>
+                    <div class="text-sm font-medium text-txt-primary dark:text-txt-primary">PureAI Panel</div>
+                    <div class="text-xs text-txt-secondary dark:text-txt-secondary">v1.0.0</div>
                 </div>
             </div>
         </div>
     </aside>
     
     <!-- 主内容区域 -->
-    <main class="flex-1 flex flex-col h-full overflow-hidden">
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-background dark:bg-background">
         <!-- 顶部导航 -->
-        <header class="py-1 px-3 border-b border-openai-border flex items-center justify-between bg-white">
+        <header class="py-1 px-3 border-b border-border-color dark:border-border-color flex items-center justify-between bg-secondary-bg dark:bg-secondary-bg">
             <!-- 模型选择 -->
             <div id="modelDropdown" class="relative inline-block z-10">
-                <button id="modelDropdownButton" class="bg-surface border border-border hover:bg-surface-hover dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 py-2 px-3 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors">
-                    <i class="fas fa-robot text-primary text-sm"></i>
-                    <span id="selectedModel" class="text-text-primary dark:text-gray-200">加载中...</span>
-                    <i class="fas fa-chevron-down text-xs text-text-muted dark:text-gray-400"></i>
+                <button id="modelDropdownButton" class="bg-background dark:bg-secondary-bg border border-border-color dark:border-border-color hover:bg-tertiary-bg dark:hover:bg-tertiary-bg py-2 px-3 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors">
+                    <i class="fas fa-robot text-primary dark:text-primary text-sm"></i>
+                    <span id="selectedModel" class="text-txt-primary dark:text-txt-primary">加载中...</span>
+                    <i class="fas fa-chevron-down text-xs text-txt-secondary dark:text-txt-secondary"></i>
                 </button>
-                <div id="modelSelect" class="absolute left-0 top-full mt-1 bg-surface dark:bg-gray-800 shadow-lg rounded-md border border-border dark:border-gray-700 z-10 hidden">
+                <div id="modelSelect" class="absolute left-0 top-full mt-1 bg-background dark:bg-secondary-bg shadow-lg rounded-md border border-border-color dark:border-border-color z-10 hidden">
                     <!-- 这里将由ModelManager.js填充内容 -->
                 </div>
             </div>
@@ -131,78 +123,90 @@
                 <!-- 使用带有更好视觉效果的按钮 -->
                 <button id="themeBtn" class="btn-action group" title="切换主题">
                     <div class="btn-action-content">
-                        <i class="fas fa-moon text-sm group-hover:text-openai-green transition-colors"></i>
+                        <i class="fas fa-moon text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
                     </div>
                 </button>
                 
                 <button id="settingsBtn" class="btn-action group" title="API设置">
                     <div class="btn-action-content">
-                        <i class="fas fa-cog text-sm group-hover:text-openai-green transition-colors"></i>
+                        <i class="fas fa-cog text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
                     </div>
                 </button>
                 
                 <button id="clearChat" class="btn-action group" title="清除对话">
                     <div class="btn-action-content">
-                        <i class="fas fa-trash text-sm group-hover:text-openai-green transition-colors"></i>
+                        <i class="fas fa-trash text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
                     </div>
                 </button>
                 
                 <!-- 移动端菜单按钮 -->
                 <button id="mobileMenuBtn" class="btn-action group md:hidden" title="菜单">
                     <div class="btn-action-content">
-                        <i class="fas fa-bars text-sm group-hover:text-openai-green transition-colors"></i>
+                        <i class="fas fa-bars text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
                     </div>
                 </button>
             </div>
         </header>
         
         <!-- 聊天区域 -->
-        <div class="flex-1 overflow-hidden flex flex-col bg-white">
+        <div class="flex-1 overflow-hidden flex flex-col bg-background dark:bg-background">
             <!-- 消息区域 -->
-            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 overflow-x-hidden w-full bg-background dark:bg-background"></div>
+            
+            <!-- 中断生成按钮 - 固定在输入框上方 -->
+            <div id="interruptButtonContainer" class="hidden fixed left-1/2 transform -translate-x-1/2 bottom-32 z-50 animate-slideup">
+                <button id="interruptButton" class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800 shadow-lg">
+                    <i class="fas fa-stop text-sm"></i>
+                    <span class="text-sm">中断生成</span>
+                </button>
+            </div>
             
             <!-- 输入区域 -->
-            <div class="p-4 border-t border-openai-border bg-white dark:bg-gray-800">
+            <div class="input-container">
                 <div class="max-w-3xl mx-auto">
-                    <div class="relative rounded-lg border border-border shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary bg-surface dark:bg-gray-700">
+                    <div class="relative rounded-lg shadow-sm">
                         <textarea 
                             id="messageInput" 
-                            class="w-full p-3 pr-12 bg-transparent border-none focus:outline-none auto-resize max-h-[200px] text-text-primary dark:text-white"
+                            class="input-textarea w-full pr-12 auto-resize max-h-[200px]"
                             placeholder="发送消息..."
                             rows="1"></textarea>
                         
                         <!-- 发送状态提示（生成中） -->
-                        <div id="sendingIndicator" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md text-text-muted dark:text-gray-400 hidden">
+                        <div id="sendingIndicator" class="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center text-txt-secondary dark:text-txt-secondary hidden">
                             <i class="fas fa-spinner fa-spin text-sm"></i>
                         </div>
                         
                         <!-- 停止生成按钮 - 初始隐藏 -->
-                        <button id="stopButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-surface-hover dark:hover:bg-gray-600 transition-all text-error hidden">
+                        <button id="stopButton" class="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center hover:bg-tertiary-bg dark:hover:bg-tertiary-bg transition-all text-error hidden">
                             <i class="fas fa-stop text-sm"></i>
                         </button>
                         
                         <!-- 发送按钮 -->
-                        <button id="sendButton" class="absolute right-3 bottom-3 h-6 w-6 flex items-center justify-center rounded-md hover:bg-surface-hover dark:hover:bg-gray-600 transition-all text-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="fas fa-paper-plane text-sm"></i>
+                        <button id="sendButton" class="send-button">
+                            <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                     
                     <!-- 底部信息栏 -->
                     <div class="flex justify-between items-center mt-2">
                         <!-- AI助手提示信息 -->
-                        <div class="text-xs text-text-muted dark:text-gray-400">
-                            AI 助手由 OpenAI API 提供支持
+                        <div class="text-xs text-txt-secondary dark:text-txt-secondary">
+                            AI 助手由 PureAI Panel version 1.0.0 提供支持
                         </div>
                         
                         <!-- 底部功能按钮组 -->
                         <div class="flex items-center gap-2">
-                            <button id="keyboardShortcutsBtn" class="text-xs px-2 py-1 rounded bg-surface-hover dark:bg-gray-700 text-text-secondary dark:text-gray-300 hover:bg-surface-active dark:hover:bg-gray-600 transition-colors flex items-center gap-1">
-                                <i class="fas fa-keyboard text-xs"></i>
-                                <span>快捷键</span>
+                            <button id="contextToggleBtn" class="button-bottom" title="切换上下文模式">
+                                <i class="fas fa-history text-xs mr-1"></i>
+                                <span id="contextStatusText">上下文开启</span>
                             </button>
-                            <button id="apiSettingsBtn" class="text-xs px-2 py-1 rounded bg-surface-hover dark:bg-gray-700 text-text-secondary dark:text-gray-300 hover:bg-surface-active dark:hover:bg-gray-600 transition-colors flex items-center gap-1">
-                                <i class="fas fa-info-circle text-xs"></i>
-                                <span>API 设置</span>
+                            <button id="keyboardShortcutsBtn" class="button-bottom">
+                                <i class="fas fa-keyboard text-xs mr-1"></i>
+                                快捷键
+                            </button>
+                            <button id="apiSettingsBtn" class="button-bottom">
+                                <i class="fas fa-gear text-xs mr-1"></i>
+                                API 设置
                             </button>
                         </div>
                     </div>
@@ -250,6 +254,67 @@
             });
             window.chatUI = chatUI;
             
+            // 初始化上下文切换按钮
+            const contextToggleBtn = document.getElementById('contextToggleBtn');
+            const contextStatusText = document.getElementById('contextStatusText');
+            if (contextToggleBtn && contextStatusText) {
+                // 初始化显示当前状态
+                const isContextEnabled = settingsManager.get('contextEnabled', true);
+                contextStatusText.textContent = isContextEnabled ? '上下文开启' : '上下文关闭';
+                
+                // 切换事件
+                contextToggleBtn.addEventListener('click', () => {
+                    const newState = settingsManager.toggle('contextEnabled');
+                    contextStatusText.textContent = newState ? '上下文开启' : '上下文关闭';
+                    
+                    // 当切换上下文状态时，在当前位置设置断点
+                    if (conversationManager) {
+                        // 尝试设置断点并获取结果
+                        const breakpointSet = conversationManager.setContextBreakpoint();
+                        
+                        if (newState) {
+                            window.toast.info('已开启上下文模式，从当前位置开始记录上下文');
+                        } else {
+                            if (breakpointSet) {
+                                window.toast.info('已关闭上下文模式，并在当前位置设置断点');
+                                
+                                // 立即显示新增的断点 - 即使在生成状态也直接插入断点元素，不重新加载整个对话
+                                if (window.chatUI) {
+                                    // 获取最新设置的断点位置
+                                    const breakpoints = conversationManager.getBreakpoints();
+                                    if (breakpoints.length > 0) {
+                                        const latestBreakpoint = Math.max(...breakpoints);
+                                        
+                                        // 获取聊天消息容器
+                                        const chatMessages = document.getElementById('chatMessages');
+                                        if (chatMessages) {
+                                            // 创建断点元素
+                                            const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
+                                            
+                                            // 如果正在生成，则在最后一条消息前添加断点
+                                            const messages = chatMessages.querySelectorAll('.chat');
+                                            if (messages.length > 0) {
+                                                // 找到应该插入断点的位置
+                                                const lastMessage = messages[messages.length - 1];
+                                                chatMessages.insertBefore(breakpointElement, lastMessage);
+                                            } else {
+                                                // 如果没有消息，则添加到末尾
+                                                chatMessages.appendChild(breakpointElement);
+                                            }
+                                            
+                                            // 绑定断点删除事件
+                                            window.chatUI.bindBreakpointDeleteEvents();
+                                        }
+                                    }
+                                }
+                            } else {
+                                window.toast.info('已关闭上下文模式');
+                            }
+                        }
+                    }
+                });
+            }
+            
             // 检查必要设置
             if (!settingsManager.hasRequiredSettings()) {
                 // 如果未设置API密钥，显示设置弹窗
@@ -266,6 +331,12 @@
                 
                 // 更新主题
                 document.documentElement.setAttribute('data-theme', newTheme);
+                // 更新Tailwind的暗色模式类
+                if (newTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
                 localStorage.setItem('selected_theme', newTheme);
                 
                 // 更新图标
@@ -286,7 +357,9 @@
             const savedTheme = localStorage.getItem('selected_theme');
             if (savedTheme) {
                 document.documentElement.setAttribute('data-theme', savedTheme);
+                // 添加暗色模式类以支持Tailwind的dark: 前缀
                 if (savedTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
                     const icon = themeBtn.querySelector('i');
                     icon.classList.remove('fa-moon');
                     icon.classList.add('fa-sun');

@@ -1,0 +1,167 @@
+/* 对话历史列表模块 - 定义对话列表的样式和布局 */
+
+/* 对话历史列表 */
+#conversationList {
+    display: flex;
+    flex-direction: column;
+    gap: 1px !important; /* 进一步减小项目间距 */
+    padding: 0 2px;
+    overflow-y: auto;
+    margin-right: -2px; /* 为滚动条留出空间 */
+    padding-right: 2px;
+}
+
+#conversationList .group {
+    position: relative;
+    transition: all 0.2s ease;
+    margin-bottom: 0 !important; /* 移除底部边距 */
+    border-radius: 6px;
+    padding: 4px 6px !important; /* 减小内边距 */
+    font-size: 0.8rem !important; /* 减小字体 */
+    display: flex !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 26px !important; /* 减小最小高度 */
+    color: var(--text-secondary); /* 使用次要文本颜色变量 */
+    border-left: 2px solid transparent; /* 为选中项准备 */
+}
+
+#conversationList .group .truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 45px); /* 确保文本不会与按钮重叠 */
+    line-height: 1.2 !important;
+}
+
+#conversationList .group:hover {
+    background-color: var(--tertiary-bg); /* 使用背景色变量 */
+    transform: translateX(2px);
+    color: var(--text-primary); /* 悬停时使用主要文本颜色 */
+}
+
+#conversationList .group.active {
+    background-color: var(--primary-light); /* 当前活动项使用主色调 */
+    color: var(--primary-dark); /* 当前活动项文本颜色 */
+    border-left: 2px solid var(--primary-color); /* 左侧边框标识 */
+}
+
+#conversationList .group .flex {
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 3px !important;
+}
+
+#conversationList .group button {
+    padding: 2px !important;
+    height: 16px !important;
+    width: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.7rem !important;
+    color: var(--text-tertiary); /* 使用第三级文本颜色 */
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+#conversationList .group button:hover {
+    color: var(--primary-color); /* 悬停时使用主色调 */
+    opacity: 1;
+}
+
+#conversationList .group .text-openai-green {
+    font-size: 0.7rem !important; /* 减小图标大小 */
+    margin-right: 2px !important;
+    color: var(--primary-color) !important; /* 使用主色调 */
+}
+
+#conversationList .group i.fa-message {
+    font-size: 0.7rem !important;
+    margin-right: 4px !important;
+    opacity: 0.7;
+    color: var(--text-tertiary); /* 使用第三级文本颜色 */
+}
+
+#conversationList .pinned-conversation {
+    background-color: var(--primary-light);
+    border-left: 2px solid var(--primary-color); /* 保持左侧边框 */
+    color: var(--primary-dark); /* 固定对话使用主色调文本 */
+}
+
+/* 添加分组指示器 - 今天/昨天/更早 */
+#conversationList .date-divider {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    padding: 2px 2px;
+    margin-top: 4px;
+    margin-bottom: 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* 对话项交互效果 */
+.conversation-item {
+    transition: all 0.2s ease;
+}
+
+.conversation-item .delete-conversation-btn {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.conversation-item:hover .delete-conversation-btn {
+    visibility: visible;
+    opacity: 0.7;
+}
+
+.conversation-item:hover .delete-conversation-btn:hover {
+    opacity: 1;
+}
+
+/* 侧边栏整体样式 */
+#sidebar .text-sm.font-medium.text-openai-gray.uppercase.tracking-wider.px-2.mb-2 {
+    font-size: 0.65rem !important;
+    margin-bottom: 3px !important;
+    color: var(--text-tertiary) !important;
+    padding: 0 4px !important;
+    letter-spacing: 0.08em;
+}
+
+/* 空白侧边栏提示 */
+#conversationList .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+#conversationList .empty-state i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+/* 对话列表滚动条 */
+#conversationList::-webkit-scrollbar {
+    width: 3px; /* 更细的滚动条 */
+}
+
+/* 小屏幕适配 */
+@media (max-width: 768px) {
+    #conversationList .group {
+        padding: 3px 4px !important;
+        font-size: 0.75rem !important;
+        min-height: 24px !important;
+    }
+    
+    #conversationList .date-divider {
+        font-size: 0.6rem;
+        padding: 1px 2px;
+    }
+} 

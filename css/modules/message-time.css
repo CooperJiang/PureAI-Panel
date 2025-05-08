@@ -1,0 +1,105 @@
+/* 消息时间戳模块 - 定义消息底部时间戳和操作区域的样式 */
+
+/* 消息时间戳和操作区容器 */
+.message-time-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+/* 时间戳文本 */
+.message-time {
+    font-size: 0.75rem;
+    color: var(--text-tertiary) !important;
+    opacity: 0.8;
+}
+
+[data-theme="dark"] .message-time {
+    color: var(--text-tertiary) !important;
+    opacity: 0.9;
+}
+
+/* 消息操作小图标组 */
+.message-action-icons {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .message-action-icons {
+    background-color: var(--tertiary-bg);
+    border-color: var(--border-color);
+}
+
+/* 覆盖Tailwind的颜色类 */
+.text-gray-500 {
+    color: var(--text-tertiary) !important;
+}
+
+[data-theme="dark"] .text-gray-500 {
+    color: var(--text-tertiary) !important;
+}
+
+/* 操作按钮组中的按钮 */
+.message-action-icons button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background-color: transparent;
+    border: none;
+    border-radius: 3px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.message-action-icons button:hover {
+    background-color: var(--tertiary-bg);
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .message-action-icons button:hover {
+    background-color: rgba(129, 199, 132, 0.1);
+}
+
+/* 按钮图标 */
+.message-action-icons button i {
+    font-size: 0.75rem;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .message-time-container {
+        margin-top: 0.125rem;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+    }
+    
+    .message-action-icons {
+        padding: 0.125rem 0.25rem;
+    }
+    
+    .message-action-icons button {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .message-action-icons button i {
+        font-size: 0.7rem;
+    }
+} 

@@ -147,21 +147,13 @@ export class CodeBlockManager {
                 // 重新处理代码块
                 this.processCodeBlock(preElement);
                 
-                // 检查生成状态
-                const isGenerating = document.body.classList.contains('isGenerating') || 
-                                    preElement.closest('.chat')?.classList.contains('isGenerating');
+                // 使用统一的方法处理代码块高度
+                this.updateCodeBlockHeight(preElement);
                 
-                if (!isGenerating) {
-                    // 如果生成已完成，确保正确设置高度和滚动属性
-                    preElement.style.maxHeight = '400px';
-                    preElement.style.overflowY = 'auto';
-                    preElement.style.removeProperty('min-height');
-                    preElement.setAttribute('data-generating', 'false');
-                    
-                    // 添加代码块容器类
-                    preElement.classList.add('code-block-container');
-                }
+                // 添加代码块容器类
+                preElement.classList.add('code-block-container');
             } catch (error) {
+                console.warn('重新初始化代码块时出错:', error);
             }
         });
     }
@@ -240,30 +232,121 @@ export class CodeBlockManager {
     }
     
     /**
-     * 美化按钮
-     * @param {HTMLButtonElement} button - 按钮元素
+     * 美化代码块按钮
+     * @param {HTMLElement} button - 要美化的按钮元素
      */
     beautifyButton(button) {
-        // 已经美化过的跳过
-        if (button.getAttribute('data-beautified') === 'true') return;
-        button.setAttribute('data-beautified', 'true');
+        if (!button) return;
         
-        // 添加基础样式
-        const classes = this.buttonStyles.base.split(' ');
-        button.classList.add(...classes);
+        // 移除旧类
+        button.className = '';
         
-        // 根据按钮类型添加特殊样式
-        if (button.classList.contains('preview-button')) {
-            button.classList.add(...this.buttonStyles.primary.split(' '));
-        } else {
-            button.classList.add(...this.buttonStyles.secondary.split(' '));
+        // 根据按钮的功能设置不同的样式
+        if (button.textContent.includes('复制') || button.querySelector('.fa-copy') || button.querySelector('.fa-clipboard')) {
+            button.classList.add('code-btn', 'copy-btn');
+            
+            // 更新内容为只有图标
+            button.innerHTML = '<i class="fas fa-copy"></i>';
+            button.title = '复制代码';
+            
+            // 添加复制成功反馈效果
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // 添加点击动画效果
+                button.classList.add('code-btn-clicked');
+                setTimeout(() => button.classList.remove('code-btn-clicked'), 300);
+                
+                // 查找最近的code元素来复制内容
+                const codeBlock = button.closest('.code-block');
+                if (codeBlock) {
+                    const codeElement = codeBlock.querySelector('code');
+                    if (codeElement && codeElement.textContent) {
+                        try {
+                            navigator.clipboard.writeText(codeElement.textContent).then(() => {
+                                // 成功后的视觉反馈
+                                const originalHTML = button.innerHTML;
+                                button.innerHTML = '<i class="fas fa-check"></i>';
+                                button.classList.add('copy-success');
+                                
+                                setTimeout(() => {
+                                    button.innerHTML = originalHTML;
+                                    button.classList.remove('copy-success');
+                                }, 2000);
+                                
+                                if (window.toast) {
+                                    window.toast.success('代码已复制到剪贴板');
+                                }
+                            });
+                        } catch (err) {
+                            if (window.toast) {
+                                window.toast.error('复制失败: ' + err.message);
+                            }
+                        }
+                    }
+                }
+            });
+        } else if (button.textContent.includes('换行') || button.querySelector('.fa-text-width') || button.textContent.includes('自动换行')) {
+            button.classList.add('code-btn', 'wrap-btn');
+            
+            // 更新内容为只有图标
+            button.innerHTML = '<i class="fas fa-text-width"></i>';
+            button.title = '切换自动换行';
+            
+            // 添加切换状态样式
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                button.classList.toggle('code-btn-active');
+                
+                // 添加点击动画效果
+                button.classList.add('code-btn-clicked');
+                setTimeout(() => button.classList.remove('code-btn-clicked'), 300);
+                
+                // 切换代码块的wrap-code类
+                const codeBlock = button.closest('.code-block');
+                if (codeBlock) {
+                    codeBlock.classList.toggle('wrap-code');
+                    // 更新图标
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        if (codeBlock.classList.contains('wrap-code')) {
+                            icon.className = 'fas fa-align-left';
+                        } else {
+                            icon.className = 'fas fa-text-width';
+                        }
+                    }
+                }
+            });
+        } else if (button.textContent.includes('预览') || button.querySelector('.fa-eye')) {
+            button.classList.add('code-btn', 'preview-btn');
+            
+            // 更新内容为只有图标
+            button.innerHTML = '<i class="fas fa-eye"></i>';
+            button.title = '预览HTML';
+            
+            // 添加点击动画效果
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                button.classList.add('code-btn-clicked');
+                setTimeout(() => button.classList.remove('code-btn-clicked'), 300);
+            });
         }
         
-        // 美化图标
-        const icon = button.querySelector('i');
-        if (icon) {
-            icon.classList.add(...this.buttonStyles.icon.split(' '));
-        }
+        // 添加悬停时的提示
+        const tooltip = document.createElement('span');
+        tooltip.className = 'btn-tooltip';
+        tooltip.textContent = button.title;
+        button.appendChild(tooltip);
+        
+        // 确保只绑定一次事件
+        button.removeEventListener('mouseenter', this._showTooltip);
+        button.removeEventListener('mouseleave', this._hideTooltip);
+        
+        this._showTooltip = () => tooltip.classList.add('show-tooltip');
+        this._hideTooltip = () => tooltip.classList.remove('show-tooltip');
+        
+        button.addEventListener('mouseenter', this._showTooltip);
+        button.addEventListener('mouseleave', this._hideTooltip);
     }
     
     /**
@@ -350,13 +433,24 @@ export class CodeBlockManager {
                                 
                                 // 显示复制成功提示
                                 const span = button.querySelector('span');
+                                const originalText = span ? span.textContent : '复制';
+                                
+                                // 添加成功状态类
+                                button.classList.add('copied');
+                                button.querySelector('i').className = 'fas fa-check';
+                                
                                 if (span) {
-                                    const originalText = span.textContent;
                                     span.textContent = '已复制!';
-                                    setTimeout(() => {
-                                        span.textContent = originalText;
-                                    }, 1500);
                                 }
+                                
+                                setTimeout(() => {
+                                    // 恢复原状
+                                    button.classList.remove('copied');
+                                    button.querySelector('i').className = 'fas fa-copy';
+                                    if (span) {
+                                        span.textContent = originalText;
+                                    }
+                                }, 1500);
                                 
                                 if (this.toast) {
                                     this.toast.success('代码已复制到剪贴板');
@@ -577,22 +671,21 @@ export class CodeBlockManager {
             try {
                 // 检查是否需要自动滚动
                 if (preElement.getAttribute('data-autoscroll') === 'true') {
-                    // 检查生成状态
-                    const isGenerating = document.body.classList.contains('isGenerating') || 
-                                        preElement.closest('.chat')?.classList.contains('isGenerating');
+                    // 更准确地检查是否在生成中：全局状态和是否在生成中的消息内
+                    const isGlobalGenerating = document.body.classList.contains('isGenerating');
+                    const chatElement = preElement.closest('.chat');
+                    const isInGeneratingMessage = chatElement && chatElement.hasAttribute('data-generating') && 
+                                                  chatElement.getAttribute('data-generating') === 'true';
+                    
+                    const isGenerating = isGlobalGenerating && isInGeneratingMessage;
                     
                     if (isGenerating) {
                         // 确保正在生成时可以自动滚动到底部
                         preElement.scrollTop = preElement.scrollHeight;
-                    } else if (preElement.getAttribute('data-generating') === 'true') {
-                        // 生成刚结束，设置正确的滚动状态
-                        preElement.style.maxHeight = '400px';
-                        preElement.style.overflowY = 'auto';
-                        preElement.style.removeProperty('min-height');
-                        preElement.setAttribute('data-generating', 'false');
                     }
                 }
             } catch (error) {
+                console.warn('更新代码块滚动状态时出错:', error);
             }
         });
     }
@@ -1048,40 +1141,46 @@ export class CodeBlockManager {
         const codeElement = preElement.querySelector('code');
         if (!codeElement) return;
         
-        // 检查是否在生成中
-        const isGenerating = document.body.classList.contains('isGenerating') || 
-                             preElement.closest('.chat')?.classList.contains('isGenerating') || 
-                             preElement.getAttribute('data-generating') === 'true';
+        // 更精确地检查是否在生成中：
+        // 1. 检查是否有全局生成状态
+        const isGlobalGenerating = document.body.classList.contains('isGenerating');
+        // 2. 检查此代码块是否属于正在生成中的消息
+        const chatElement = preElement.closest('.chat');
+        const isInGeneratingMessage = chatElement && chatElement.hasAttribute('data-generating') && 
+                                      chatElement.getAttribute('data-generating') === 'true';
+        
+        // 只有全局生成状态和属于生成中消息的代码块才应用特殊样式
+        const isGenerating = isGlobalGenerating && isInGeneratingMessage;
         
         // 如果是首次设置高度
         if (!preElement.dataset.heightStabilized) {
-            // 不再设置过大的minHeight，使用固定的合理值
-            preElement.style.minHeight = '100px';
             preElement.dataset.heightStabilized = 'true';
             
-            // 同时处理滚动条显示
+            // 根据是否在生成中设置不同样式
             if (isGenerating) {
-                preElement.style.overflowY = 'hidden'; // 生成中隐藏滚动条
-                preElement.style.maxHeight = 'none'; // 不限制高度
+                // 生成中的代码块：无限高度，隐藏滚动条
+                preElement.style.minHeight = '100px';
+                preElement.style.maxHeight = 'none';
+                preElement.style.overflowY = 'hidden';
+                preElement.setAttribute('data-generating', 'true');
             } else {
-                preElement.style.overflowY = 'auto'; // 生成后显示滚动条
-                preElement.style.maxHeight = '400px'; // 限制高度
-                // 确保移除任何可能存在的大min-height
+                // 非生成中的代码块：固定最大高度，显示滚动条
+                preElement.style.maxHeight = '400px';
+                preElement.style.overflowY = 'auto';
                 preElement.style.removeProperty('min-height');
+                preElement.setAttribute('data-generating', 'false');
             }
         }
         // 如果代码块已经完成渲染
         else if (preElement.dataset.heightStabilized === 'true') {
-            // 根据生成状态切换滚动条和高度限制
+            // 状态转换：从生成中到完成
             if (!isGenerating && preElement.getAttribute('data-generating') === 'true') {
-                // 生成刚刚结束，从无限制切换到有限制
+                // 添加过渡动画
                 preElement.style.transition = 'max-height 0.3s ease-in-out';
+                // 设置固定高度和滚动
                 preElement.style.maxHeight = '400px';
                 preElement.style.overflowY = 'auto';
-                
-                // 完全移除min-height属性，确保滚动条可以显示
                 preElement.style.removeProperty('min-height');
-                
                 preElement.setAttribute('data-generating', 'false');
                 
                 // 300ms后移除过渡效果
@@ -1089,14 +1188,13 @@ export class CodeBlockManager {
                     preElement.style.transition = '';
                 }, 300);
             }
-            else if (isGenerating) {
-                // 正在生成，避免滚动条闪烁
+            // 状态转换：从完成到生成中（罕见情况，但为了完整性）
+            else if (isGenerating && preElement.getAttribute('data-generating') === 'false') {
+                // 设置无限高度
                 preElement.style.maxHeight = 'none';
                 preElement.style.overflowY = 'hidden';
-                preElement.setAttribute('data-generating', 'true');
-                
-                // 不再调整minHeight，保持一个合理的固定值
                 preElement.style.minHeight = '100px';
+                preElement.setAttribute('data-generating', 'true');
             }
         }
     }
@@ -1110,19 +1208,10 @@ export class CodeBlockManager {
         
         processedPreElements.forEach(preElement => {
             try {
-                // 更新高度以防止抖动
+                // 直接调用updateCodeBlockHeight方法，使用统一的逻辑处理高度
                 this.updateCodeBlockHeight(preElement);
-                
-                // 检查是否生成已完成，如果完成则确保移除过大的min-height
-                const isGenerating = document.body.classList.contains('isGenerating') || 
-                                    preElement.closest('.chat')?.classList.contains('isGenerating');
-                if (!isGenerating) {
-                    // 确保移除任何过大的min-height值
-                    preElement.style.removeProperty('min-height');
-                    preElement.style.maxHeight = '400px';
-                    preElement.style.overflowY = 'auto';
-                }
             } catch (error) {
+                console.warn('处理代码块高度时出错:', error);
             }
         });
     }

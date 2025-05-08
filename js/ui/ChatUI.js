@@ -64,6 +64,10 @@ export class ChatUI {
         this.stopButton = document.getElementById('stopButton');
         this.sendingIndicator = document.getElementById('sendingIndicator');
         
+        // 中断按钮相关
+        this.interruptButton = document.getElementById('interruptButton');
+        this.interruptButtonContainer = document.getElementById('interruptButtonContainer');
+        
         // 侧边栏相关
         this.sidebar = document.getElementById('sidebar');
         this.newChatBtn = document.getElementById('newChatBtn');
@@ -120,19 +124,19 @@ export class ChatUI {
                                 <div id="content-${messageId}" class="markdown-content">${this.formatter.formatMessage(message)}</div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mr-10 mt-1">
-                            <div class="message-buttons flex space-x-1">
-                                <button class="edit-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="编辑消息">
-                                    <i class="fas fa-edit text-sm text-gray-500"></i>
+                        <div class="flex items-center justify-between mr-12 mt-2">
+                            <div class="message-buttons flex space-x-2">
+                                <span class="message-time text-xs text-gray-500">${timeStr}</span>
+                                <button class="edit-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="编辑消息">
+                                    <i class="fas fa-edit text-sm"></i>
                                 </button>
-                                <button class="copy-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="复制消息">
-                                    <i class="fas fa-copy text-sm text-gray-500"></i>
+                                <button class="copy-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="复制消息">
+                                    <i class="fas fa-copy text-sm"></i>
                                 </button>
-                                <button class="delete-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="删除消息">
-                                    <i class="fas fa-trash-alt text-sm text-gray-500"></i>
+                                <button class="delete-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="删除消息">
+                                    <i class="fas fa-trash-alt text-sm"></i>
                                 </button>
                             </div>
-                            <span class="message-time text-xs text-gray-500">${timeStr}</span>
                         </div>
                     `;
                     
@@ -173,26 +177,26 @@ export class ChatUI {
                             <div class="message-content bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-bl-sm">
                                 <div id="content-${messageId}" class="assistant-content markdown-content">
                                     ${isStream 
-                                        ? '<span class="cursor-blink"></span>' 
+                                        ? '' 
                                         : this.formatter.formatMessage(message)}
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between ml-10 mt-1">
-                            <span class="message-time text-xs text-gray-500">${timeStr}</span>
-                            <div class="message-buttons flex space-x-1">
-                                <button class="edit-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="编辑消息">
-                                    <i class="fas fa-edit text-sm text-gray-500"></i>
+                        <div class="flex items-center justify-between ml-12 mt-2">
+                            <div class="message-buttons flex space-x-2">
+                                <button class="edit-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="编辑消息">
+                                    <i class="fas fa-edit text-sm"></i>
                                 </button>
-                                <button class="copy-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="复制消息">
-                                    <i class="fas fa-copy text-sm text-gray-500"></i>
+                                <button class="copy-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="复制消息">
+                                    <i class="fas fa-copy text-sm"></i>
                                 </button>
-                                <button class="delete-message-btn p-1 bg-gray-50 hover:bg-gray-200 active:bg-gray-300 rounded transition-all transform active:scale-95" title="删除消息">
-                                    <i class="fas fa-trash-alt text-sm text-gray-500"></i>
+                                <button class="delete-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="删除消息">
+                                    <i class="fas fa-trash-alt text-sm"></i>
                                 </button>
+                                <div class="text-xs text-openai-gray token-count estimating">估算中...</div>
+                                <span class="message-time text-xs text-gray-500">${timeStr}</span>
                             </div>
                         </div>
-                        <div class="ml-10 text-xs text-openai-gray token-count estimating">估算中...</div>
                     `;
                     
                     // 应用代码高亮
@@ -270,17 +274,40 @@ export class ChatUI {
                         <div class="text-2xl font-medium mb-3">👋 欢迎使用 PureAI 聊天面板</div>
                         <p class="text-gray-500 mb-4">随时随地与AI助手对话，获取帮助与灵感</p>
                         <div class="flex justify-center gap-3 mt-4">
-                            <div class="max-w-xs p-4 bg-gray-50 rounded-lg border border-gray-100">
+                            <div class="max-w-xs p-4 rounded-lg border card-bg">
                                 <div class="text-lg font-medium mb-2">💬 开始对话</div>
                                 <p class="text-sm text-gray-500">在下方输入框发送消息，开始与AI对话</p>
                             </div>
-                            <div class="max-w-xs p-4 bg-gray-50 rounded-lg border border-gray-100">
+                            <div class="max-w-xs p-4 rounded-lg border card-bg">
                                 <div class="text-lg font-medium mb-2">⚙️ 自定义设置</div>
                                 <p class="text-sm text-gray-500">选择不同AI模型，调整应用设置</p>
                             </div>
                         </div>
                     `;
                     return welcomeDiv;
+                },
+                
+                // 创建上下文断点标记
+                createContextBreakpoint: (breakpointIndex) => {
+                    const breakpointElement = document.createElement('div');
+                    breakpointElement.className = 'context-breakpoint flex items-center justify-center my-4 animate__animated animate__fadeIn';
+                    breakpointElement.dataset.breakpointIndex = breakpointIndex !== undefined ? String(breakpointIndex) : '';
+                    
+                    breakpointElement.innerHTML = `
+                        <div class="w-full flex items-center">
+                            <div class="h-px bg-gray-300 dark:bg-gray-600 flex-grow mr-3"></div>
+                            <div class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full flex items-center">
+                                <i class="fas fa-cut mr-1"></i>
+                                <span>上下文断点</span>
+                                <button class="delete-breakpoint-btn ml-2 hover:text-red-500 transition-colors" title="删除断点">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="h-px bg-gray-300 dark:bg-gray-600 flex-grow ml-3"></div>
+                        </div>
+                    `;
+                    
+                    return breakpointElement;
                 }
             };
         } catch (error) {
@@ -376,7 +403,12 @@ export class ChatUI {
             this.stopButton.addEventListener('click', () => this.stopGeneration());
         }
         
-        // 消息输入框事件
+        // 中断按钮事件
+        if (this.interruptButton) {
+            this.interruptButton.addEventListener('click', () => this.stopGeneration());
+        }
+        
+        // 处理输入框事件
         if (this.messageInput) {
             // 处理输入法事件
             let isComposing = false;
@@ -387,11 +419,28 @@ export class ChatUI {
             
             this.messageInput.addEventListener('compositionend', () => {
                 isComposing = false;
+                // 输入法结束后重新调整高度
+                this.adjustTextareaHeight();
             });
             
             // 处理输入框高度自适应
             this.messageInput.addEventListener('input', () => {
                 this.adjustTextareaHeight();
+            });
+            
+            // 添加光标移动和滚动事件监听
+            this.messageInput.addEventListener('click', () => this.adjustTextareaHeight());
+            this.messageInput.addEventListener('keyup', (e) => {
+                // 方向键、删除键等可能改变光标位置的键需要重新调整滚动
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Backspace', 'Delete'].includes(e.key)) {
+                    this.adjustTextareaHeight();
+                }
+            });
+            
+            // 增加滚动事件监听，确保滚动正常工作
+            this.messageInput.addEventListener('scroll', (e) => {
+                // 阻止事件冒泡，避免影响外层容器的滚动
+                e.stopPropagation();
             });
             
             // 处理按键事件，避免中文输入法问题
@@ -404,20 +453,38 @@ export class ChatUI {
                     }
                 }
             });
+            
+            // 处理粘贴事件
+            this.messageInput.addEventListener('paste', () => {
+                // 延迟调整，等待粘贴内容完成渲染
+                setTimeout(() => this.adjustTextareaHeight(), 0);
+            });
         }
         
         // 清除按钮事件
         if (this.clearButton) {
             this.clearButton.addEventListener('click', () => {
-                if (confirm('确定要清除所有消息吗？这将创建一个新的对话。')) {
-                    this.newChat();
+                if (confirm('确定要清除所有消息吗？这将清空当前对话的所有消息。')) {
+                    // 清除当前对话的所有消息
+                    this.conversationManager.clearMessages();
+                    
+                    // 清空聊天区域
+                    this.messageHandler.clearChatArea();
+                    
+                    // 更新对话列表
+                    this.sidebarManager.renderConversationList();
+                    
+                    // 聚焦输入框
+                    if (this.messageInput) {
+                        this.messageInput.focus();
+                    }
                 }
             });
         }
         
         // 设置按钮事件
         if (this.settingsButton) {
-            this.settingsButton.addEventListener('click', () => this.modalManager.openSettingsModal());
+            this.settingsButton.addEventListener('click', () => this.openSettingsModal());
         }
         
         // 底部快捷键按钮事件
@@ -431,7 +498,7 @@ export class ChatUI {
         // 底部API设置按钮事件
         if (this.apiSettingsBtn) {
             this.apiSettingsBtn.addEventListener('click', () => {
-                this.modalManager.openSettingsModal();
+                this.openSettingsModal();
             });
         }
         
@@ -443,6 +510,9 @@ export class ChatUI {
         
         // 初始调整输入框高度
         this.adjustTextareaHeight();
+        
+        // 绑定断点删除按钮的点击事件
+        this.bindBreakpointDeleteEvents();
     }
     
     /**
@@ -451,14 +521,73 @@ export class ChatUI {
     adjustTextareaHeight() {
         if (!this.messageInput) return;
         
-        // 重置高度
+        // 保存原始滚动条位置
+        const scrollTop = this.messageInput.scrollTop;
+        
+        // 重置高度以准确计算内容高度
         this.messageInput.style.height = 'auto';
         
-        // 计算新高度
-        const newHeight = Math.min(Math.max(this.messageInput.scrollHeight, 40), 200); // 最小高度40px，最大高度200px
+        // 获取内容的实际高度和限制高度
+        const scrollHeight = this.messageInput.scrollHeight;
+        const minHeight = 45; // 与CSS中保持一致
+        const maxHeight = 200;
+        
+        // 计算新高度：不小于最小高度，不大于最大高度
+        const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
         
         // 设置新高度
         this.messageInput.style.height = newHeight + 'px';
+        
+        // 处理滚动条类
+        this.messageInput.classList.remove('scrollable');
+        
+        // 检查是否达到最大高度
+        if (scrollHeight > maxHeight) {
+            // 如果超过最大高度，启用滚动
+            this.messageInput.style.overflowY = 'auto';
+            this.messageInput.classList.add('scrollable');
+            
+            // 恢复之前的滚动位置或滚动到光标位置
+            if (this.messageInput === document.activeElement) {
+                // 如果正在输入，尝试滚动到光标位置
+                const cursorPosition = this.messageInput.selectionStart;
+                if (typeof cursorPosition === 'number') {
+                    try {
+                        // 创建临时元素计算光标位置
+                        const textBeforeCursor = this.messageInput.value.substring(0, cursorPosition);
+                        const tempEl = document.createElement('div');
+                        tempEl.style.position = 'absolute';
+                        tempEl.style.visibility = 'hidden';
+                        tempEl.style.whiteSpace = 'pre-wrap';
+                        tempEl.style.wordBreak = 'break-word';
+                        tempEl.style.width = this.messageInput.clientWidth + 'px';
+                        tempEl.style.font = window.getComputedStyle(this.messageInput).font;
+                        tempEl.style.padding = window.getComputedStyle(this.messageInput).padding;
+                        tempEl.textContent = textBeforeCursor;
+                        document.body.appendChild(tempEl);
+                        
+                        // 计算光标高度并滚动
+                        const cursorHeight = tempEl.clientHeight;
+                        document.body.removeChild(tempEl);
+                        
+                        // 滚动到光标位置附近，留一定空间
+                        if (cursorHeight > maxHeight) {
+                            this.messageInput.scrollTop = Math.max(0, cursorHeight - maxHeight * 0.7);
+                        }
+                    } catch (e) {
+                        // 失败时使用原始滚动位置
+                        this.messageInput.scrollTop = scrollTop;
+                    }
+                } else {
+                    this.messageInput.scrollTop = scrollTop;
+                }
+            } else {
+                this.messageInput.scrollTop = scrollTop;
+            }
+        } else {
+            // 未达到最大高度时，禁用滚动
+            this.messageInput.style.overflowY = 'hidden';
+        }
     }
     
     /**
@@ -528,9 +657,27 @@ export class ChatUI {
         // 清空聊天区域
         this.messageHandler.clearChatArea();
         
+        // 获取断点位置信息
+        const breakpoints = this.conversationManager.getBreakpoints();
+        
         // 加载对话中的所有消息
         if (currentConversation.messages && currentConversation.messages.length > 0) {
             currentConversation.messages.forEach((message, index) => {
+                // 检查是否是断点标记消息
+                if (message.type === 'breakpoint') {
+                    // 创建并添加断点标记
+                    const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(index);
+                    this.chatMessages.appendChild(breakpointElement);
+                    return; // 跳过进一步处理
+                }
+                
+                // 检查是否需要在此位置添加断点标记(兼容旧版数据)
+                if (breakpoints.includes(index)) {
+                    // 创建并添加断点标记
+                    const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(index);
+                    this.chatMessages.appendChild(breakpointElement);
+                }
+                
                 if (message.role === 'user') {
                     // 添加用户消息并设置索引
                     const userMessageElement = this.messageHandler.addUserMessage(message.content, false);
@@ -570,7 +717,8 @@ export class ChatUI {
         // 选择当前对话使用的模型
         if (currentConversation.config && currentConversation.config.model) {
             // 使用对话特定的配置中的模型
-            this.modelManager.selectModel(currentConversation.config.model);
+            const modelId = currentConversation.config.model;
+            this.modelManager.selectModel(modelId);
         } else if (currentConversation.model) {
             // 兼容旧版数据格式
             this.modelManager.selectModel(currentConversation.model);
@@ -588,6 +736,9 @@ export class ChatUI {
         
         // 更新对话列表
         this.sidebarManager.renderConversationList();
+        
+        // 绑定断点删除按钮事件
+        this.bindBreakpointDeleteEvents();
     }
     
     /**
@@ -656,6 +807,12 @@ export class ChatUI {
             }
             return;
         }
+
+        // 执行消息发送前回调，如果有的话
+        if (typeof this._beforeMessageSent === 'function') {
+            const shouldContinue = this._beforeMessageSent();
+            if (shouldContinue === false) return;
+        }
         
         // 获取用户消息内容
         const userMessage = this.messageInput.value.trim();
@@ -663,17 +820,48 @@ export class ChatUI {
         // 清空输入框
         this.messageInput.value = '';
         
+        // 重置输入框高度
+        this.messageInput.style.height = '40px';
+        this.adjustTextareaHeight();
+        
+        // 检查上下文状态，如果上下文已关闭，在用户消息前添加断点标记
+        const contextEnabled = this.settingsManager.get('contextEnabled');
+        if (contextEnabled === false || contextEnabled === 'false') {
+            // 设置断点
+            if (this.conversationManager) {
+                // 设置断点并获取是否成功
+                const breakpointSet = this.conversationManager.setContextBreakpoint();
+                
+                if (breakpointSet) {
+                    // 获取最新设置的断点位置
+                    const breakpoints = this.conversationManager.getBreakpoints();
+                    if (breakpoints.length > 0) {
+                        const latestBreakpoint = Math.max(...breakpoints);
+                        
+                        // 创建断点元素
+                        const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
+                        
+                        // 在消息区域添加断点标记
+                        this.chatMessages.appendChild(breakpointElement);
+                        
+                        // 绑定断点删除事件
+                        this.bindBreakpointDeleteEvents();
+                    }
+                }
+            }
+        }
+        
         // 添加用户消息到界面
         const userMessageElement = this.messageHandler.addUserMessage(userMessage);
         
-        // 保存消息到当前对话 - 这里添加用户消息
-        const userMsg = this.conversationManager.addMessage('user', userMessage);
-        // 同时提前添加一个空的助手消息占位符，避免在generateResponse中重复添加
-        const assistantMsg = this.conversationManager.addMessage('assistant', '');
+        // 强制滚动到底部，确保用户消息可见
+        this.scrollToBottom(true);
         
-        // 记录消息索引便于后续更新
-        const userIndex = this.conversationManager.getCurrentConversation().messages.length - 2;
-        const assistantIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
+        // 保存消息到当前对话 - 这里只添加用户消息
+        const userMsg = this.conversationManager.addMessage('user', userMessage);
+        
+        // 记录用户消息索引便于后续更新
+        const userIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
         
         // 重要：设置用户消息的索引属性
         if (userMessageElement instanceof HTMLElement) {
@@ -683,25 +871,10 @@ export class ChatUI {
         // 更新对话列表
         this.sidebarManager.renderConversationList();
         
-        // 重置临时数据，确保每次都能重新生成响应
-        this._currentStreamContent = '';
-        this._lastAssistantMessageId = null;
-        
-        // 发送到API获取回复，传入索引便于更新
-        await this.generateResponse(userMessage, userIndex, assistantIndex);
-    }
-    
-    /**
-     * 生成AI响应
-     * @param {string} userMessage - 用户消息
-     * @param {number} userIndex - 用户消息在对话中的索引
-     * @param {number} assistantIndex - 助手消息在对话中的索引
-     */
-    async generateResponse(userMessage, userIndex, assistantIndex) {
-        // 防止重复生成
-        if (this.isGenerating) return;
-        
         try {
+            // 防止重复生成
+            if (this.isGenerating) return;
+            
             // 设置生成状态
             this.isGenerating = true;
             // 设置全局生成状态
@@ -721,10 +894,12 @@ export class ChatUI {
             this.chatMessages.appendChild(assistantElement);
             this._lastAssistantMessageId = assistantId;
             
-            // 为助手消息设置索引属性
-            if (assistantElement instanceof HTMLElement) {
-                assistantElement.dataset.index = assistantIndex.toString();
-            }
+            // 助手消息暂时不设置索引属性，会在回复完成后设置
+            
+            // 强制再次滚动到底部，确保新添加的助手消息可见
+            setTimeout(() => {
+                this.scrollToBottom(true);
+            }, 50);
             
             // 请求响应
             this.abortController = new AbortController();
@@ -780,6 +955,7 @@ export class ChatUI {
                     // 滚动到底部
                     this.scrollToBottom();
                 } catch (e) {
+                    console.error('流式响应处理错误:', e);
                 }
             };
             
@@ -800,10 +976,9 @@ export class ChatUI {
                         assistantElement.dataset.content = finalContent;
                     }
                     
-                    // 更新对话管理器中的助手消息内容并确保保存
-                    if (this.conversationManager) {
-                        this.conversationManager.editMessage(assistantIndex, finalContent);
-                    }
+                    // 现在才将AI的回复添加到对话管理器中
+                    const assistantMsg = this.conversationManager.addMessage('assistant', finalContent);
+                    const assistantIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
                     
                     // 预估并显示token数量
                     this.updateTokenCount(assistantId, finalContent);
@@ -818,13 +993,8 @@ export class ChatUI {
                         // 添加消息索引，用于编辑和删除
                         const assistantElement = document.getElementById(assistantId);
                         if (assistantElement) {
-                            // 获取当前会话中最新消息的索引
-                            const currentConversation = this.conversationManager.getCurrentConversation();
-                            if (currentConversation && currentConversation.messages) {
-                                // 设置消息索引为最后一条消息的索引
-                                const messageIndex = currentConversation.messages.length - 1;
-                                assistantElement.dataset.index = messageIndex.toString();
-                            }
+                            // 设置消息索引
+                            assistantElement.dataset.index = assistantIndex.toString();
                         }
                         
                         // 更新UI状态 - 强制将停止按钮隐藏，将发送按钮显示
@@ -838,7 +1008,12 @@ export class ChatUI {
                         }
                         
                         // 保存当前对话
-                        this.saveCurrentConversationIfNeeded();
+                        if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
+                            this.conversationManager.saveCurrentConversation();
+                        } else {
+                            // 兼容旧版保存方式
+                            this.saveCurrentConversationIfNeeded();
+                        }
                         
                         // 最终处理代码块
                         setTimeout(() => {
@@ -864,9 +1039,17 @@ export class ChatUI {
                                     this.messageHandler.setupImagePreviews();
                                 }
                                 
-                                // 再次检查并确保输入框状态被重置
-                                this.showStopButton(false);
+                                // 强制滚动到AI回复的底部，无论用户是否手动滚动过
+                                setTimeout(() => {
+                                    this.scrollToBottom(true);
+                                    
+                                    // 额外延迟再次滚动，确保所有内容渲染完毕后滚动到底部
+                                    setTimeout(() => {
+                                        this.scrollToBottom(true);
+                                    }, 200);
+                                }, 300);
                             } catch (e) {
+                                console.error('流式响应完成后处理错误:', e);
                             }
                         }, 100);
                     };
@@ -875,14 +1058,12 @@ export class ChatUI {
                     this.streamManager.setAnimationCompleteCallback(handleStreamingComplete);
                     
                     // 直接执行一次回调，确保状态被重置
-                    // 这样即使流式动画回调出问题，UI状态也能恢复
                     setTimeout(() => {
                         this.isGenerating = false;
                         this.streamManager.setGlobalGeneratingState(false);
                         this.showStopButton(false);
                     }, 500);
                 } catch (e) {
-                    
                     // 确保状态正确重置
                     this.isGenerating = false;
                     this.streamManager.setGlobalGeneratingState(false);
@@ -893,6 +1074,7 @@ export class ChatUI {
             
             // 错误处理函数
             const handleStreamError = (error) => {
+                console.error('生成回复错误:', error);
                 
                 // 重置状态
                 this.isGenerating = false;
@@ -912,15 +1094,22 @@ export class ChatUI {
                     msgElement.appendChild(errorElement);
                 }
             };
-            
+
             // 获取当前对话的所有消息
             const conversationMessages = this.conversationManager.getCurrentConversation().messages;
+            
+            // 验证上下文设置
+            const contextEnabled = this.settingsManager.get('contextEnabled');
+            console.log("ChatUI 上下文开启状态:", contextEnabled);
+            console.log("当前对话消息数:", conversationMessages.length);
             
             // 确保消息格式正确
             const formattedMessages = conversationMessages.map(msg => ({
                 role: msg.role,
                 content: msg.content
             }));
+            
+            console.log("发送消息前，当前对话上下文状态:", this.settingsManager.get("contextEnabled"));
             
             // 发送API请求
             await this.apiClient.generateChatCompletion(
@@ -933,12 +1122,15 @@ export class ChatUI {
                 config
             );
         } catch (error) {
+            console.error('发送消息错误:', error);
             
             // 重置状态
             this.isGenerating = false;
             this.streamManager.setGlobalGeneratingState(false);
             this.showStopButton(false);
-            this.sendingIndicator.classList.add('hidden');
+            if (this.sendingIndicator) {
+                this.sendingIndicator.classList.add('hidden');
+            }
         }
     }
     
@@ -951,25 +1143,59 @@ export class ChatUI {
         // 中止当前请求
         this.abortController.abort();
         
-        // 停止流式动画
-        this.streamManager.stopAllAnimations();
+        // 获取当前已生成的内容 - 这部分在中断时需要保存
+        const currentContent = this._currentStreamContent || '';
         
-        // 更新状态
+        // 获取助手消息ID和元素
+        const assistantId = this._lastAssistantMessageId;
+        const assistantElement = document.getElementById(assistantId);
+        
+        if (currentContent && assistantElement) {
+            // 确保更新消息元素的内容属性
+            assistantElement.dataset.content = currentContent;
+            
+            // 将中断时的内容添加到对话中
+            const assistantMsg = this.conversationManager.addMessage('assistant', currentContent);
+            const assistantIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
+            
+            // 设置消息索引属性
+            assistantElement.dataset.index = assistantIndex.toString();
+            
+            // 保存当前对话
+            if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
+                this.conversationManager.saveCurrentConversation();
+            } else {
+                // 兼容旧版方式
+                this.conversationManager.saveConversations();
+            }
+            
+            // 更新token计数
+            this.updateTokenCount(assistantId, currentContent);
+            
+            // 标记元素不再处于生成状态
+            assistantElement.removeAttribute('data-generating');
+        }
+        
+        // 重置状态
         this.isGenerating = false;
+        this._currentStreamContent = '';
         
-        // 确保UI完全重置
-        this.showStopButton(false);
-        if (this.sendingIndicator) {
-            this.sendingIndicator.classList.add('hidden');
+        // 隐藏中断按钮
+        this.hideInterruptButton();
+        
+        // 恢复输入框
+        this.enableInput();
+        
+        // 重置全局生成状态
+        if (this.streamManager) {
+            this.streamManager.setGlobalGeneratingState(false);
+            this.streamManager.stopAllAnimations();
         }
-        if (this.sendButton) {
-            this.sendButton.classList.remove('hidden');
-            this.sendButton.disabled = false;
+        
+        // 更新代码块样式
+        if (window.codeBlockManager) {
+            window.codeBlockManager.updateExistingCodeBlocksScroll();
         }
-        
-        // 移除生成中的全局状态类
-        document.body.classList.remove('isGenerating');
-        
     }
     
     /**
@@ -983,6 +1209,11 @@ export class ChatUI {
         
         if (this.sendingIndicator) {
             this.sendingIndicator.classList.toggle('hidden', !show);
+        }
+        
+        // 显示或隐藏中断按钮容器
+        if (this.interruptButtonContainer) {
+            this.interruptButtonContainer.classList.toggle('hidden', !show);
         }
         
         if (this.sendButton) {
@@ -1060,22 +1291,50 @@ export class ChatUI {
     
     /**
      * 滚动到底部
+     * @param {boolean} force - 是否强制滚动，即使用户手动滚动过也滚动
+     * @param {number} delay - 可选的延迟时间(ms)
      */
-    scrollToBottom() {
-        if (!this.chatMessages) return;
+    scrollToBottom(force = false, delay = 0) {
+        const scrollFn = () => {
+            if (!this.chatMessages) return;
+            
+            // 如果用户正在查看历史消息（手动滚动了）且不是强制滚动，则不自动滚动
+            if (this.userHasScrolled && !force) {
+                // 显示新消息提示
+                this._showNewMessageIndicator();
+                return;
+            }
+            
+            // 确保计算正确的滚动高度
+            const scrollHeight = this.chatMessages.scrollHeight;
+            
+            // 使用平滑滚动效果，提高用户体验
+            this.chatMessages.scrollTo({
+                top: scrollHeight,
+                behavior: 'smooth'
+            });
+            
+            // 添加备份滚动方法，确保在某些情况下滚动是有效的
+            setTimeout(() => {
+                if (this.chatMessages.scrollTop < scrollHeight - 50) {
+                    this.chatMessages.scrollTop = scrollHeight;
+                }
+                
+                // 再次检查并滚动，以防内容高度在此期间发生变化
+                setTimeout(() => {
+                    const updatedScrollHeight = this.chatMessages.scrollHeight;
+                    if (this.chatMessages.scrollTop < updatedScrollHeight - 50) {
+                        this.chatMessages.scrollTop = updatedScrollHeight;
+                    }
+                }, 100);
+            }, 150);
+        };
         
-        // 如果用户正在查看历史消息（手动滚动了），则不自动滚动
-        if (this.userHasScrolled) {
-            // 显示新消息提示
-            this._showNewMessageIndicator();
-            return;
+        if (delay > 0) {
+            setTimeout(scrollFn, delay);
+        } else {
+            scrollFn();
         }
-        
-        // 使用平滑滚动效果，提高用户体验
-        this.chatMessages.scrollTo({
-            top: this.chatMessages.scrollHeight,
-            behavior: 'smooth'
-        });
     }
     
     /**
@@ -1191,5 +1450,141 @@ export class ChatUI {
             }
         } else {
         }
+    }
+    
+    /**
+     * 隐藏中断按钮
+     */
+    hideInterruptButton() {
+        if (this.stopButton) {
+            this.stopButton.classList.add('hidden');
+        }
+        
+        if (this.sendingIndicator) {
+            this.sendingIndicator.classList.add('hidden');
+        }
+        
+        if (this.interruptButtonContainer) {
+            this.interruptButtonContainer.classList.add('hidden');
+        }
+        
+        if (this.sendButton) {
+            this.sendButton.classList.remove('hidden');
+            this.sendButton.disabled = false;
+        }
+        
+        // 移除生成中的全局状态类
+        document.body.classList.remove('isGenerating');
+    }
+    
+    /**
+     * 显示中断按钮
+     */
+    showInterruptButton() {
+        if (this.stopButton) {
+            this.stopButton.classList.remove('hidden');
+        }
+        
+        if (this.sendingIndicator) {
+            this.sendingIndicator.classList.remove('hidden');
+        }
+        
+        if (this.interruptButtonContainer) {
+            this.interruptButtonContainer.classList.remove('hidden');
+        }
+        
+        if (this.sendButton) {
+            this.sendButton.classList.add('hidden');
+            this.sendButton.disabled = true;
+        }
+        
+        // 添加生成中的全局状态类
+        document.body.classList.add('isGenerating');
+    }
+    
+    /**
+     * 禁用输入框
+     */
+    disableInput() {
+        if (this.messageInput) {
+            this.messageInput.disabled = true;
+            this.messageInput.style.opacity = '0.7';
+        }
+    }
+    
+    /**
+     * 启用输入框
+     */
+    enableInput() {
+        if (this.messageInput) {
+            this.messageInput.disabled = false;
+            this.messageInput.style.opacity = '1';
+            
+            // 重置输入框高度
+            this.messageInput.style.height = '40px';
+            this.adjustTextareaHeight();
+        }
+    }
+    
+    /**
+     * 打开设置模态框
+     */
+    openSettingsModal() {
+        if (this.modalManager && typeof this.modalManager.openSettingsModal === 'function') {
+            this.modalManager.openSettingsModal();
+        }
+    }
+    
+    /**
+     * 设置消息发送前的回调函数
+     * @param {Function} callback - 消息发送前的回调函数
+     */
+    setBeforeMessageSentCallback(callback) {
+        if (typeof callback === 'function') {
+            this._beforeMessageSent = callback;
+        }
+    }
+    
+    /**
+     * 设置消息生成完成后的回调函数
+     * @param {Function} callback - 消息生成完成后的回调函数
+     */
+    setMessageGeneratedCallback(callback) {
+        if (typeof callback === 'function') {
+            this._onMessageGenerated = callback;
+        }
+    }
+    
+    /**
+     * 绑定断点删除按钮的点击事件
+     */
+    bindBreakpointDeleteEvents() {
+        if (!this.chatMessages) return;
+        
+        // 使用事件代理绑定到消息容器
+        this.chatMessages.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-breakpoint-btn');
+            if (deleteBtn) {
+                // 找到断点元素
+                const breakpointEl = deleteBtn.closest('.context-breakpoint');
+                if (breakpointEl && breakpointEl.dataset.breakpointIndex) {
+                    const breakpointIndex = parseInt(breakpointEl.dataset.breakpointIndex);
+                    
+                    // 删除断点
+                    const success = this.conversationManager.removeBreakpoint(breakpointIndex);
+                    if (success) {
+                        // 从UI中移除断点标记元素
+                        breakpointEl.classList.add('animate__fadeOut');
+                        setTimeout(() => {
+                            breakpointEl.remove();
+                            // 显示成功通知
+                            if (window.toast) {
+                                window.toast.success('断点已删除，上下文已重新连接');
+                            }
+                        }, 500);
+                    }
+                }
+            }
+        });
     }
 } 

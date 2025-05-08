@@ -18,6 +18,33 @@ import { MessageFormatter } from '../js/utils.js';
 export class ChatMessageComponent {
     static formatter = new MessageFormatter();
     
+    /**
+     * 创建上下文断点标记
+     * @param {number} breakpointIndex - 断点的索引位置
+     * @returns {HTMLElement} 断点标记元素
+     */
+    static createContextBreakpoint(breakpointIndex) {
+        const breakpointElement = document.createElement('div');
+        breakpointElement.className = 'context-breakpoint flex items-center justify-center my-4 animate__animated animate__fadeIn';
+        breakpointElement.dataset.breakpointIndex = breakpointIndex !== undefined ? String(breakpointIndex) : '';
+        
+        breakpointElement.innerHTML = `
+            <div class="w-full flex items-center">
+                <div class="h-px bg-gray-300 dark:bg-gray-600 flex-grow mr-3"></div>
+                <div class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full flex items-center">
+                    <i class="fas fa-cut mr-1"></i>
+                    <span>上下文断点</span>
+                    <button class="delete-breakpoint-btn ml-2 hover:text-red-500 transition-colors" title="删除断点">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="h-px bg-gray-300 dark:bg-gray-600 flex-grow ml-3"></div>
+            </div>
+        `;
+        
+        return breakpointElement;
+    }
+    
     static createUserMessage(content) {
         const messageElement = document.createElement('div');
         messageElement.className = 'chat chat-end animate__animated animate__fadeIn group';
@@ -83,7 +110,6 @@ export class ChatMessageComponent {
                 <div class="chat-bubble">
                     <div id="content-${messageId}" class="markdown-content text-sm leading-snug">
                         ${content ? this.formatter.formatMessage(content) : ''}
-                        ${isStream ? '<span class="cursor-blink"></span>' : ''}
                     </div>
                 </div>
             </div>

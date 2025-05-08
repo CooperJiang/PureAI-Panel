@@ -7,6 +7,214 @@ export class ConversationManager {
         this.loadConversations();
     }
     
+    /**
+     * 设置对话上下文断点
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {boolean} - 是否成功设置断点
+     */
+    setContextBreakpoint(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (!conversation || !conversation.messages || conversation.messages.length === 0) {
+            return false;
+        }
+        
+        // 初始化断点数组（如果不存在）
+        if (!Array.isArray(conversation.breakpoints)) {
+            conversation.breakpoints = [];
+        }
+        
+        // 找到最后一条消息
+        const lastMessageIndex = conversation.messages.length - 1;
+        const lastMessage = conversation.messages[lastMessageIndex];
+        
+        // 确保最后一条消息是助手消息，这样断点会在一组对话(用户+助手)之后
+        if (lastMessage.role !== 'assistant') {
+            // 如果最后一条不是助手消息，寻找最后一个助手消息的位置
+            let lastAssistantIndex = -1;
+            for (let i = lastMessageIndex; i >= 0; i--) {
+                if (conversation.messages[i].role === 'assistant') {
+                    lastAssistantIndex = i;
+                    break;
+                }
+            }
+            
+            // 如果找到了助手消息，则在其后设置断点
+            if (lastAssistantIndex >= 0) {
+                const breakpointIndex = lastAssistantIndex + 1;
+                
+                // 避免重复添加相同位置的断点
+                if (!conversation.breakpoints.includes(breakpointIndex)) {
+                    conversation.breakpoints.push(breakpointIndex);
+                    // 按照索引顺序排序
+                    conversation.breakpoints.sort((a, b) => a - b);
+                    
+                    // 添加一个断点标记消息到消息数组中
+                    this.addBreakpointMessage(conversationId, breakpointIndex);
+                    this.saveConversations();
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            // 最后一条是助手消息，直接在其后添加断点
+            const breakpointIndex = lastMessageIndex + 1;
+            
+            // 避免重复添加相同位置的断点
+            if (!conversation.breakpoints.includes(breakpointIndex)) {
+                conversation.breakpoints.push(breakpointIndex);
+                // 按照索引顺序排序
+                conversation.breakpoints.sort((a, b) => a - b);
+                
+                // 添加一个断点标记消息到消息数组中
+                this.addBreakpointMessage(conversationId, breakpointIndex);
+                this.saveConversations();
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 添加一个断点标记消息到消息数组
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @param {number} position - 断点位置，不提供则添加到消息末尾
+     * @returns {Object} 添加的断点消息对象
+     */
+    addBreakpointMessage(conversationId = null, position = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (conversation) {
+            // 创建断点标记消息
+            const breakpointMessage = {
+                id: 'breakpoint-' + Date.now(),
+                type: 'breakpoint',
+                timestamp: new Date().toISOString()
+            };
+            
+            // 添加到消息数组的指定位置或末尾
+            if (position !== null && position >= 0 && position <= conversation.messages.length) {
+                conversation.messages.splice(position, 0, breakpointMessage);
+                
+                // 更新大于此位置的断点索引
+                conversation.breakpoints = conversation.breakpoints.map(bp => {
+                    if (bp >= position && bp !== position) return bp + 1;
+                    return bp;
+                });
+            } else {
+                // 添加到末尾
+                conversation.messages.push(breakpointMessage);
+            }
+            
+            conversation.updatedAt = new Date().toISOString();
+            this.saveConversations();
+            return breakpointMessage;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 获取最近的一个断点之后的消息，确保第一条始终是用户消息
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {Array} - 断点之后的消息数组，确保首条是用户消息
+     */
+    getMessagesAfterBreakpoint(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (!conversation) return [];
+        
+        // 如果没有断点或断点数组为空，返回所有消息
+        if (!Array.isArray(conversation.breakpoints) || conversation.breakpoints.length === 0) {
+            return this._ensureValidMessageSequence(conversation.messages.filter(msg => msg.type !== 'breakpoint'));
+        }
+        
+        // 获取最近的断点
+        const latestBreakpoint = Math.max(...conversation.breakpoints);
+        let messages = conversation.messages.slice(latestBreakpoint).filter(msg => msg.type !== 'breakpoint');
+        
+        // 确保消息序列有效（首条必须是用户消息）
+        return this._ensureValidMessageSequence(messages);
+    }
+    
+    /**
+     * 确保消息序列有效（第一条必须是用户消息）
+     * @private
+     * @param {Array} messages - 消息数组
+     * @returns {Array} - 处理后的有效消息数组
+     */
+    _ensureValidMessageSequence(messages) {
+        if (messages.length === 0) return [];
+        
+        // 如果第一条不是用户消息，找到第一条用户消息
+        if (messages[0].role !== 'user') {
+            const firstUserMsgIndex = messages.findIndex(msg => msg.role === 'user');
+            
+            // 如果找到了用户消息，从那里开始切片
+            if (firstUserMsgIndex > 0) {
+                return messages.slice(firstUserMsgIndex);
+            }
+            
+            // 如果没有用户消息，返回空数组
+            return [];
+        }
+        
+        return messages;
+    }
+    
+    /**
+     * 获取对话的所有断点位置信息
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {Array} - 断点索引数组
+     */
+    getBreakpoints(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (!conversation) return [];
+        
+        // 确保返回数组
+        return Array.isArray(conversation.breakpoints) ? conversation.breakpoints : [];
+    }
+    
+    /**
+     * 获取对话的所有消息
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {Array} - 所有消息数组
+     */
+    getAllMessages(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (!conversation) return [];
+        
+        return conversation.messages;
+    }
+    
+    /**
+     * 清除对话的所有断点
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     */
+    clearBreakpoints(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (conversation) {
+            conversation.breakpoints = [];
+            this.saveConversations();
+        }
+    }
+    
     // 加载所有保存的对话
     loadConversations() {
         try {
@@ -51,6 +259,7 @@ export class ConversationManager {
             id: 'conv-' + Date.now(),
             title: title,
             messages: [],
+            breakpoints: [],  // 初始化为空数组
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isPinned: false, // 添加置顶标记
@@ -370,5 +579,97 @@ export class ConversationManager {
     isPinned(id) {
         const conversation = this.getConversationById(id);
         return conversation ? conversation.isPinned : false;
+    }
+    
+    // 保存当前对话
+    saveCurrentConversation() {
+        try {
+            // 保存所有对话
+            this.saveConversations();
+            return true;
+        } catch (error) {
+            console.error('保存当前对话失败:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * 删除指定索引的断点
+     * @param {number} breakpointIndex - 要删除的断点索引位置
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {boolean} - 是否成功删除
+     */
+    removeBreakpoint(breakpointIndex, conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (!conversation) return false;
+        
+        // 确保断点数组存在
+        if (!Array.isArray(conversation.breakpoints)) {
+            return false;
+        }
+        
+        // 确保breakpointIndex是数字
+        const index = parseInt(breakpointIndex, 10);
+        if (isNaN(index)) {
+            return false;
+        }
+        
+        // 直接在断点数组中查找该值
+        const indexInArray = conversation.breakpoints.indexOf(index);
+        if (indexInArray !== -1) {
+            // 从断点数组中删除
+            conversation.breakpoints.splice(indexInArray, 1);
+            
+            // 查找并删除断点标记消息
+            for (let i = 0; i < conversation.messages.length; i++) {
+                const msg = conversation.messages[i];
+                if (msg.type === 'breakpoint' && i === index) {
+                    // 移除断点消息
+                    conversation.messages.splice(i, 1);
+                    
+                    // 更新所有大于此索引的断点值
+                    conversation.breakpoints = conversation.breakpoints.map(bp => {
+                        if (bp > index) return bp - 1;
+                        return bp;
+                    });
+                    
+                    break;
+                }
+            }
+            
+            // 保存更改
+            this.saveConversations();
+            return true;
+        }
+        
+        // 尝试作为消息索引查找
+        for (let i = 0; i < conversation.messages.length; i++) {
+            const msg = conversation.messages[i];
+            if (msg.type === 'breakpoint' && msg.id && msg.id.includes(index)) {
+                // 查找该位置是否在断点数组中
+                const bpIndex = conversation.breakpoints.indexOf(i);
+                if (bpIndex !== -1) {
+                    // 从断点数组中删除
+                    conversation.breakpoints.splice(bpIndex, 1);
+                    // 从消息数组中删除
+                    conversation.messages.splice(i, 1);
+                    
+                    // 更新更大索引的断点
+                    conversation.breakpoints = conversation.breakpoints.map(bp => {
+                        if (bp > i) return bp - 1;
+                        return bp;
+                    });
+                    
+                    // 保存更改
+                    this.saveConversations();
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 } 
