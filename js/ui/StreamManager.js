@@ -595,12 +595,15 @@ export class StreamManager {
                     // 强制确保生成状态被重置
                     document.body.classList.remove('isGenerating');
                     
+                    // 重置状态
+                    this.globalGeneratingState = false;
+                    
                     // 尝试获取全局UI实例并重置状态
                     if (window.chatUI) {
                         try {
                             window.chatUI.isGenerating = false;
-                            if (typeof window.chatUI.showStopButton === 'function') {
-                                window.chatUI.showStopButton(false);
+                            if (typeof window.chatUI.showInterruptButton === 'function') {
+                                window.chatUI.showInterruptButton(false);
                             }
                         } catch (e) {
                         }
@@ -613,8 +616,8 @@ export class StreamManager {
                 document.body.classList.remove('isGenerating');
                 if (window.chatUI && window.chatUI.isGenerating) {
                     window.chatUI.isGenerating = false;
-                    if (typeof window.chatUI.showStopButton === 'function') {
-                        window.chatUI.showStopButton(false);
+                    if (typeof window.chatUI.showInterruptButton === 'function') {
+                        window.chatUI.showInterruptButton(false);
                     }
                 }
             }, 1000);

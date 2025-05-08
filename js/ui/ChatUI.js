@@ -34,6 +34,14 @@ export class ChatUI {
         // 缓存DOM元素
         this.cacheElements();
         
+        // 确保发送按钮和加载指示器的初始状态正确
+        if (this.sendButton) {
+            this.sendButton.style.display = 'flex';
+        }
+        if (this.sendingIndicator) {
+            this.sendingIndicator.style.display = 'none';
+        }
+        
         // 初始化格式化器
         this.formatter = new MessageFormatter();
         
@@ -61,10 +69,9 @@ export class ChatUI {
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
-        this.stopButton = document.getElementById('stopButton');
         this.sendingIndicator = document.getElementById('sendingIndicator');
         
-        // 中断按钮相关
+        // 中断按钮相关 - 使用中断按钮代替停止按钮
         this.interruptButton = document.getElementById('interruptButton');
         this.interruptButtonContainer = document.getElementById('interruptButtonContainer');
         
@@ -362,7 +369,8 @@ export class ChatUI {
                 newChatBtn: this.newChatBtn,
                 conversationManager: this.conversationManager,
                 onSwitchConversation: (conversationId) => this.loadConversation(conversationId),
-                onNewChat: () => this.newChat()
+                onNewChat: () => this.newChat(),
+                onOpenSettings: () => this.openSettingsModal()
             });
             
             // 初始化模态框管理模块
@@ -382,6 +390,7 @@ export class ChatUI {
             });
             
         } catch (error) {
+            console.error('初始化子模块失败:', error);
         }
     }
     
@@ -396,11 +405,6 @@ export class ChatUI {
                     this.sendMessage();
                 }
             });
-        }
-        
-        // 停止按钮事件
-        if (this.stopButton) {
-            this.stopButton.addEventListener('click', () => this.stopGeneration());
         }
         
         // 中断按钮事件
@@ -464,20 +468,26 @@ export class ChatUI {
         // 清除按钮事件
         if (this.clearButton) {
             this.clearButton.addEventListener('click', () => {
-                if (confirm('确定要清除所有消息吗？这将清空当前对话的所有消息。')) {
-                    // 清除当前对话的所有消息
-                    this.conversationManager.clearMessages();
-                    
-                    // 清空聊天区域
-                    this.messageHandler.clearChatArea();
-                    
-                    // 更新对话列表
-                    this.sidebarManager.renderConversationList();
-                    
-                    // 聚焦输入框
-                    if (this.messageInput) {
-                        this.messageInput.focus();
+                // 如果正在生成内容，不允许清除对话
+                if (this.isGenerating) {
+                    if (window.toast) {
+                        window.toast.warning('请等待当前回复生成完成再清除对话');
                     }
+                    return;
+                }
+                
+                // 清除当前对话的所有消息
+                this.conversationManager.clearMessages();
+                    
+                // 清空聊天区域
+                this.messageHandler.clearChatArea();
+                
+                // 更新对话列表
+                this.sidebarManager.renderConversationList();
+                
+                // 聚焦输入框
+                if (this.messageInput) {
+                    this.messageInput.focus();
                 }
             });
         }
@@ -667,7 +677,30 @@ export class ChatUI {
                 if (message.type === 'breakpoint') {
                     // 创建并添加断点标记
                     const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(index);
-                    this.chatMessages.appendChild(breakpointElement);
+                    
+                    // 找到应该插入断点的位置
+                    // 如果索引为0，添加到最前面
+                    if (index === 0) {
+                        if (this.chatMessages.firstChild) {
+                            this.chatMessages.insertBefore(breakpointElement, this.chatMessages.firstChild);
+                        } else {
+                            this.chatMessages.appendChild(breakpointElement);
+                        }
+                    } else {
+                        // 获取当前已添加的消息元素
+                        const existingMessages = this.chatMessages.querySelectorAll('.chat:not(.context-breakpoint)');
+                        // 确保断点添加到正确的位置之后
+                        if (index - 1 < existingMessages.length) {
+                            const targetMessage = existingMessages[index - 1];
+                            if (targetMessage && targetMessage.nextSibling) {
+                                this.chatMessages.insertBefore(breakpointElement, targetMessage.nextSibling);
+                            } else {
+                                this.chatMessages.appendChild(breakpointElement);
+                            }
+                        } else {
+                            this.chatMessages.appendChild(breakpointElement);
+                        }
+                    }
                     return; // 跳过进一步处理
                 }
                 
@@ -675,7 +708,30 @@ export class ChatUI {
                 if (breakpoints.includes(index)) {
                     // 创建并添加断点标记
                     const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(index);
-                    this.chatMessages.appendChild(breakpointElement);
+                    
+                    // 找到应该插入断点的位置 - 与上面相同的逻辑
+                    // 如果索引为0，添加到最前面
+                    if (index === 0) {
+                        if (this.chatMessages.firstChild) {
+                            this.chatMessages.insertBefore(breakpointElement, this.chatMessages.firstChild);
+                        } else {
+                            this.chatMessages.appendChild(breakpointElement);
+                        }
+                    } else {
+                        // 获取当前已添加的消息元素
+                        const existingMessages = this.chatMessages.querySelectorAll('.chat:not(.context-breakpoint)');
+                        // 确保断点添加到正确的位置之后
+                        if (index - 1 < existingMessages.length) {
+                            const targetMessage = existingMessages[index - 1];
+                            if (targetMessage && targetMessage.nextSibling) {
+                                this.chatMessages.insertBefore(breakpointElement, targetMessage.nextSibling);
+                            } else {
+                                this.chatMessages.appendChild(breakpointElement);
+                            }
+                        } else {
+                            this.chatMessages.appendChild(breakpointElement);
+                        }
+                    }
                 }
                 
                 if (message.role === 'user') {
@@ -754,6 +810,14 @@ export class ChatUI {
      * @param {string} conversationId - 对话ID
      */
     loadConversation(conversationId) {
+        // 如果正在生成内容，不允许切换对话
+        if (this.isGenerating) {
+            if (window.toast) {
+                window.toast.warning('请等待当前回复生成完成再切换对话');
+            }
+            return;
+        }
+        
         // 保存当前对话
         this.saveCurrentConversationIfNeeded();
         
@@ -774,6 +838,14 @@ export class ChatUI {
      * 新建对话
      */
     newChat() {
+        // 如果正在生成内容，不允许创建新对话
+        if (this.isGenerating) {
+            if (window.toast) {
+                window.toast.warning('请等待当前回复生成完成再创建新对话');
+            }
+            return;
+        }
+        
         // 创建新对话
         this.conversationManager.createNewConversation();
         
@@ -797,6 +869,9 @@ export class ChatUI {
      */
     async sendMessage() {
         if (!this.messageInput || !this.messageInput.value.trim()) return;
+        
+        // 检查是否正在生成
+        if (this.isGenerating) return;
         
         // 检查API设置是否有效
         const apiKey = this.settingsManager.get('apiKey');
@@ -841,8 +916,32 @@ export class ChatUI {
                         // 创建断点元素
                         const breakpointElement = this.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
                         
-                        // 在消息区域添加断点标记
-                        this.chatMessages.appendChild(breakpointElement);
+                        // 在消息区域添加断点标记 - 修正插入位置
+                        // 获取所有消息元素
+                        const allMessages = this.chatMessages.querySelectorAll('.chat');
+                        if (allMessages.length > 0) {
+                            // 计算UI中正确的插入位置
+                            // 获取消息列表中实际消息数量(不包括已有断点等非消息元素)
+                            const messageElements = Array.from(allMessages).filter(el => !el.classList.contains('context-breakpoint'));
+                            
+                            // 找到正确的插入位置，确保我们插入在正确位置之后的第一条消息之前
+                            // 如果latestBreakpoint恰好等于消息数量，则放在最后
+                            if (latestBreakpoint >= messageElements.length) {
+                                this.chatMessages.appendChild(breakpointElement);
+                            } else {
+                                // 找到对应位置的消息并在其前面插入断点
+                                const targetMessage = messageElements[latestBreakpoint];
+                                if (targetMessage) {
+                                    this.chatMessages.insertBefore(breakpointElement, targetMessage);
+                                } else {
+                                    // 如果找不到对应位置（异常情况），则添加到末尾
+                                    this.chatMessages.appendChild(breakpointElement);
+                                }
+                            }
+                        } else {
+                            // 如果没有消息，则添加到末尾
+                            this.chatMessages.appendChild(breakpointElement);
+                        }
                         
                         // 绑定断点删除事件
                         this.bindBreakpointDeleteEvents();
@@ -880,11 +979,13 @@ export class ChatUI {
             // 设置全局生成状态
             this.streamManager.setGlobalGeneratingState(true);
             
-            // 更新UI状态
-            this.showStopButton(true);
-            if (this.sendingIndicator) {
-                this.sendingIndicator.classList.remove('hidden');
-            }
+            // 更新UI状态 - 显示加载中状态
+            this.sendButton.style.display = 'none';
+            this.sendingIndicator.style.display = 'flex';
+            this.showInterruptButton(true);
+            
+            // 禁用输入
+            this.disableInput();
             
             // 重置之前的消息状态数据
             this._currentStreamContent = '';
@@ -990,6 +1091,10 @@ export class ChatUI {
                         this.streamManager.setGlobalGeneratingState(false);
                         this.abortController = null;
                         
+                        // 恢复UI状态
+                        this.sendButton.style.display = 'flex';
+                        this.sendingIndicator.style.display = 'none';
+                        
                         // 添加消息索引，用于编辑和删除
                         const assistantElement = document.getElementById(assistantId);
                         if (assistantElement) {
@@ -997,15 +1102,11 @@ export class ChatUI {
                             assistantElement.dataset.index = assistantIndex.toString();
                         }
                         
-                        // 更新UI状态 - 强制将停止按钮隐藏，将发送按钮显示
-                        this.showStopButton(false);
-                        if (this.sendingIndicator) {
-                            this.sendingIndicator.classList.add('hidden');
-                        }
-                        if (this.sendButton) {
-                            this.sendButton.classList.remove('hidden');
-                            this.sendButton.disabled = false;
-                        }
+                        // 更新UI状态 - 隐藏中断按钮，显示发送按钮
+                        this.showInterruptButton(false);
+                        
+                        // 启用输入
+                        this.enableInput();
                         
                         // 保存当前对话
                         if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
@@ -1061,14 +1162,19 @@ export class ChatUI {
                     setTimeout(() => {
                         this.isGenerating = false;
                         this.streamManager.setGlobalGeneratingState(false);
-                        this.showStopButton(false);
+                        this.showInterruptButton(false);
+                        this.sendButton.style.display = 'flex';
+                        this.sendingIndicator.style.display = 'none';
+                        this.enableInput();
                     }, 500);
                 } catch (e) {
                     // 确保状态正确重置
                     this.isGenerating = false;
                     this.streamManager.setGlobalGeneratingState(false);
-                    this.showStopButton(false);
-                    this.sendingIndicator.classList.add('hidden');
+                    this.showInterruptButton(false);
+                    this.sendingIndicator.style.display = 'none';
+                    this.sendButton.style.display = 'flex';
+                    this.enableInput();
                 }
             };
             
@@ -1079,11 +1185,23 @@ export class ChatUI {
                 // 重置状态
                 this.isGenerating = false;
                 this.streamManager.setGlobalGeneratingState(false);
-                this.showStopButton(false);
-                this.sendingIndicator.classList.add('hidden');
+                this.showInterruptButton(false);
+                this.sendingIndicator.style.display = 'none';
+                this.sendButton.style.display = 'flex';
+                this.enableInput();
                 
-                // 显示错误消息
-                const errorMsg = '⚠️ 生成回复时出现错误，请稍后再试。';
+                // 根据错误类型显示不同的错误消息
+                let errorMsg = '⚠️ 生成回复时出现错误，请稍后再试。';
+                
+                // 处理特定的错误类型
+                if (error.message && error.message.includes('empty array')) {
+                    errorMsg = '⚠️ 消息内容为空，无法生成回复。请尝试添加一条用户消息后再试。';
+                } else if (error.message && error.message.includes('API key')) {
+                    errorMsg = '⚠️ API密钥无效或已过期，请在设置中更新您的API密钥。';
+                } else if (error.message && error.message.includes('timeout')) {
+                    errorMsg = '⚠️ 请求超时，服务器可能繁忙，请稍后再试。';
+                }
+                
                 const errorElement = document.createElement('div');
                 errorElement.className = 'error-message text-red-500 text-sm mt-1 ml-12';
                 errorElement.textContent = errorMsg;
@@ -1091,7 +1209,17 @@ export class ChatUI {
                 // 添加错误到助手消息下方
                 const msgElement = document.getElementById(assistantId);
                 if (msgElement) {
+                    // 清空内容区域显示友好的错误提示
+                    const contentElement = msgElement.querySelector('.assistant-content');
+                    if (contentElement) {
+                        contentElement.innerHTML = `<div class="p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">${errorMsg}</div>`;
+                    }
                     msgElement.appendChild(errorElement);
+                } else {
+                    // 如果找不到消息元素，使用toast显示错误
+                    if (window.toast) {
+                        window.toast.error(errorMsg);
+                    }
                 }
             };
 
@@ -1100,16 +1228,35 @@ export class ChatUI {
             
             // 验证上下文设置
             const contextEnabled = this.settingsManager.get('contextEnabled');
-            console.log("ChatUI 上下文开启状态:", contextEnabled);
-            console.log("当前对话消息数:", conversationMessages.length);
             
-            // 确保消息格式正确
-            const formattedMessages = conversationMessages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-            }));
+            // 确保消息格式正确，并过滤掉断点标记等非消息内容
+            const formattedMessages = conversationMessages
+                .filter(msg => 
+                    msg.role && 
+                    msg.content && 
+                    ['user', 'assistant', 'system'].includes(msg.role) && 
+                    !msg.isBreakpoint && 
+                    !msg.type
+                )
+                .map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }));
             
-            console.log("发送消息前，当前对话上下文状态:", this.settingsManager.get("contextEnabled"));
+            // 确保最后添加的用户消息也包含在内
+            // 这是一个额外的安全检查，防止消息数组为空
+            let hasLatestUserMessage = false;
+            if (formattedMessages.length > 0) {
+                const lastMsg = formattedMessages[formattedMessages.length - 1];
+                hasLatestUserMessage = lastMsg.role === 'user';
+            }
+            
+            if (!hasLatestUserMessage && userMessage) {
+                formattedMessages.push({
+                    role: 'user',
+                    content: userMessage
+                });
+            }
             
             // 发送API请求
             await this.apiClient.generateChatCompletion(
@@ -1127,10 +1274,10 @@ export class ChatUI {
             // 重置状态
             this.isGenerating = false;
             this.streamManager.setGlobalGeneratingState(false);
-            this.showStopButton(false);
-            if (this.sendingIndicator) {
-                this.sendingIndicator.classList.add('hidden');
-            }
+            this.showInterruptButton(false);
+            this.sendingIndicator.style.display = 'none';
+            this.sendButton.style.display = 'flex';
+            this.enableInput();
         }
     }
     
@@ -1180,6 +1327,10 @@ export class ChatUI {
         this.isGenerating = false;
         this._currentStreamContent = '';
         
+        // 恢复UI状态
+        this.sendButton.style.display = 'flex';
+        this.sendingIndicator.style.display = 'none';
+        
         // 隐藏中断按钮
         this.hideInterruptButton();
         
@@ -1196,44 +1347,40 @@ export class ChatUI {
         if (window.codeBlockManager) {
             window.codeBlockManager.updateExistingCodeBlocksScroll();
         }
+        
+        // 显示提示
+        if (window.toast) {
+            window.toast.info('已停止生成');
+        }
     }
     
     /**
-     * 显示或隐藏停止按钮，同时控制发送按钮状态
-     * @param {boolean} show - 是否显示停止按钮
+     * 显示或隐藏中断按钮，同时控制发送按钮状态
+     * @param {boolean} show - 是否显示中断按钮
      */
-    showStopButton(show) {
-        if (this.stopButton) {
-            this.stopButton.classList.toggle('hidden', !show);
-        }
-        
-        if (this.sendingIndicator) {
-            this.sendingIndicator.classList.toggle('hidden', !show);
-        }
-        
+    showInterruptButton(show) {
         // 显示或隐藏中断按钮容器
         if (this.interruptButtonContainer) {
-            this.interruptButtonContainer.classList.toggle('hidden', !show);
+            this.interruptButtonContainer.style.display = show ? 'block' : 'none';
         }
-        
-        if (this.sendButton) {
-            if (show) {
-                // 生成中状态
-                this.sendButton.classList.add('hidden');
-                this.sendButton.disabled = true;
-            } else {
-                // 可发送状态
-                this.sendButton.classList.remove('hidden');
-                this.sendButton.disabled = false;
-            }
-        }
-        
-        // 更新全局生成状态
-        document.body.classList.toggle('isGenerating', show);
         
         // 将this.isGenerating与UI状态同步
         this.isGenerating = show;
         
+        // 更新全局生成状态
+        document.body.classList.toggle('isGenerating', show);
+    }
+    
+    /**
+     * 隐藏中断按钮
+     */
+    hideInterruptButton() {
+        if (this.interruptButtonContainer) {
+            this.interruptButtonContainer.style.display = 'none';
+        }
+        
+        // 移除生成中的全局状态类
+        document.body.classList.remove('isGenerating');
     }
     
     /**
@@ -1450,56 +1597,6 @@ export class ChatUI {
             }
         } else {
         }
-    }
-    
-    /**
-     * 隐藏中断按钮
-     */
-    hideInterruptButton() {
-        if (this.stopButton) {
-            this.stopButton.classList.add('hidden');
-        }
-        
-        if (this.sendingIndicator) {
-            this.sendingIndicator.classList.add('hidden');
-        }
-        
-        if (this.interruptButtonContainer) {
-            this.interruptButtonContainer.classList.add('hidden');
-        }
-        
-        if (this.sendButton) {
-            this.sendButton.classList.remove('hidden');
-            this.sendButton.disabled = false;
-        }
-        
-        // 移除生成中的全局状态类
-        document.body.classList.remove('isGenerating');
-    }
-    
-    /**
-     * 显示中断按钮
-     */
-    showInterruptButton() {
-        if (this.stopButton) {
-            this.stopButton.classList.remove('hidden');
-        }
-        
-        if (this.sendingIndicator) {
-            this.sendingIndicator.classList.remove('hidden');
-        }
-        
-        if (this.interruptButtonContainer) {
-            this.interruptButtonContainer.classList.remove('hidden');
-        }
-        
-        if (this.sendButton) {
-            this.sendButton.classList.add('hidden');
-            this.sendButton.disabled = true;
-        }
-        
-        // 添加生成中的全局状态类
-        document.body.classList.add('isGenerating');
     }
     
     /**

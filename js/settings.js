@@ -2,18 +2,19 @@
 export class SettingsManager {
     constructor() {
         const contextEnabledValue = localStorage.getItem('context_enabled');
-        console.log('初始化contextEnabled, 从localStorage读取的值:', contextEnabledValue);
+        
+        // 改进流式输出设置的读取方式，更严格地检查布尔值
+        const streamEnabledValue = localStorage.getItem('stream_enabled');
         
         this.settings = {
             apiKey: localStorage.getItem('openai_api_key') || '',
             baseUrl: localStorage.getItem('openai_base_url') || 'https://api.openai.com',
-            streamEnabled: localStorage.getItem('stream_enabled') !== 'false',
+            // 更精确地处理流式输出设置
+            streamEnabled: streamEnabledValue === null ? true : streamEnabledValue !== 'false',
             contextEnabled: contextEnabledValue !== 'false',
             darkMode: localStorage.getItem('dark_mode') === 'true' || 
                      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
         };
-        
-        console.log('初始化后的contextEnabled值:', this.settings.contextEnabled);
         
         // 初始化深色模式
         if (this.settings.darkMode) {
@@ -32,8 +33,11 @@ export class SettingsManager {
         // 特殊检查上下文开关
         if (key === 'contextEnabled') {
             const storedValue = localStorage.getItem('context_enabled');
-            console.log('获取contextEnabled设置，localStorage值:', storedValue);
-            console.log('settings中的值:', this.settings[key]);
+            return this.settings[key];
+        }
+        
+        // 特殊检查流式输出开关
+        if (key === 'streamEnabled') {
             return this.settings[key];
         }
         
@@ -53,11 +57,11 @@ export class SettingsManager {
                 localStorage.setItem('openai_base_url', value);
                 break;
             case 'streamEnabled':
-                localStorage.setItem('stream_enabled', value);
+                // 确保布尔值正确转换为字符串
+                localStorage.setItem('stream_enabled', String(value));
                 break;
             case 'contextEnabled':
                 localStorage.setItem('context_enabled', String(value));
-                console.log('设置context_enabled为:', value, '类型:', typeof value, '保存后localStorage值:', localStorage.getItem('context_enabled'), '类型:', typeof localStorage.getItem('context_enabled'));
                 break;
             case 'darkMode':
                 localStorage.setItem('dark_mode', value);
@@ -73,10 +77,8 @@ export class SettingsManager {
     
     // 切换布尔设置
     toggle(key) {
-        console.log('切换设置前:', key, this.settings[key]);
         const newValue = !this.settings[key];
         this.set(key, newValue);
-        console.log('切换设置后:', key, this.settings[key], '本地存储值:', localStorage.getItem(key === 'contextEnabled' ? 'context_enabled' : key));
         return this.settings[key];
     }
     

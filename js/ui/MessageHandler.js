@@ -396,14 +396,7 @@ export class MessageHandler {
                 
                 const index = parseInt(messageElement.dataset.index);
                 if (isNaN(index)) return;
-                
-                // 确认删除
-                if (confirm('确定要删除这条消息吗？')) {
-                    // 调用删除回调
-                    if (this.onDeleteMessage) {
-                        this.onDeleteMessage(index);
-                    }
-                }
+                this.onDeleteMessage(index);
             });
         });
         

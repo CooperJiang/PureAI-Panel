@@ -73,7 +73,7 @@
     <!-- 左侧边栏 - 对话历史 -->
     <aside class="w-64 bg-secondary-bg dark:bg-secondary-bg border-r border-border-color dark:border-border-color flex-shrink-0 flex flex-col h-full overflow-auto transition-all duration-300" id="sidebar">
         <!-- 边栏头部 -->
-        <div class="p-4 border-b border-border-color dark:border-border-color">
+        <div class="p-1 border-b border-border-color dark:border-border-color">
             <button id="newChatBtn" class="bg-background dark:bg-secondary-bg text-txt-primary dark:text-txt-primary hover:bg-tertiary-bg dark:hover:bg-tertiary-bg w-full py-2 px-3 rounded-md border border-border-color dark:border-border-color flex items-center justify-between transition-all">
                 <span class="font-medium">新建对话</span>
                 <i class="fas fa-plus text-xs"></i>
@@ -172,14 +172,9 @@
                             rows="1"></textarea>
                         
                         <!-- 发送状态提示（生成中） -->
-                        <div id="sendingIndicator" class="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center text-txt-secondary dark:text-txt-secondary hidden">
-                            <i class="fas fa-spinner fa-spin text-sm"></i>
+                        <div id="sendingIndicator" class="absolute hidden">
+                            <i class="fas fa-spinner fa-spin"></i>
                         </div>
-                        
-                        <!-- 停止生成按钮 - 初始隐藏 -->
-                        <button id="stopButton" class="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center hover:bg-tertiary-bg dark:hover:bg-tertiary-bg transition-all text-error hidden">
-                            <i class="fas fa-stop text-sm"></i>
-                        </button>
                         
                         <!-- 发送按钮 -->
                         <button id="sendButton" class="send-button">
@@ -291,12 +286,27 @@
                                             // 创建断点元素
                                             const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
                                             
-                                            // 如果正在生成，则在最后一条消息前添加断点
+                                            // 获取所有消息元素
                                             const messages = chatMessages.querySelectorAll('.chat');
                                             if (messages.length > 0) {
-                                                // 找到应该插入断点的位置
-                                                const lastMessage = messages[messages.length - 1];
-                                                chatMessages.insertBefore(breakpointElement, lastMessage);
+                                                // 修正: 计算UI中正确的插入位置
+                                                // 获取消息列表中实际消息数量(不包括已有断点等非消息元素)
+                                                const messageElements = Array.from(messages).filter(el => !el.classList.contains('context-breakpoint'));
+                                                
+                                                // 找到正确的插入位置，确保我们插入在正确位置之后的第一条消息之前
+                                                // 如果latestBreakpoint恰好等于消息数量，则放在最后
+                                                if (latestBreakpoint >= messageElements.length) {
+                                                    chatMessages.appendChild(breakpointElement);
+                                                } else {
+                                                    // 找到对应位置的消息并在其前面插入断点
+                                                    const targetMessage = messageElements[latestBreakpoint];
+                                                    if (targetMessage) {
+                                                        chatMessages.insertBefore(breakpointElement, targetMessage);
+                                                    } else {
+                                                        // 如果找不到对应位置（异常情况），则添加到末尾
+                                                        chatMessages.appendChild(breakpointElement);
+                                                    }
+                                                }
                                             } else {
                                                 // 如果没有消息，则添加到末尾
                                                 chatMessages.appendChild(breakpointElement);

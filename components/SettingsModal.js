@@ -414,6 +414,11 @@ export class SettingsModalComponent {
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
         
+        // 确保关闭任何打开的下拉菜单
+        if (this.modelSelect) {
+            this.modelSelect.closeDropdown();
+        }
+        
         // 延迟隐藏模态框
         setTimeout(() => {
             this.modalElement.classList.remove('opacity-100');

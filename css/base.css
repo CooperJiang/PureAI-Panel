@@ -441,11 +441,11 @@ button, .btn {
 /* 发送按钮样式 */
 .send-button {
     position: absolute;
-    right: 10px;
-    top: 50%;
+    right: 12px;
+    bottom: 5px;
     transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background-color: var(--primary-color);
     color: white;
@@ -454,6 +454,9 @@ button, .btn {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+}
+.send-button i {
+    font-size: 12px;
 }
 
 .send-button:hover {

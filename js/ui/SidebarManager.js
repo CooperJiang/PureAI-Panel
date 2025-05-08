@@ -11,6 +11,7 @@ export class SidebarManager {
      * @param {Object} options.conversationManager - 对话管理器
      * @param {Function} options.onSwitchConversation - 切换对话的回调
      * @param {Function} options.onNewChat - 新建对话的回调
+     * @param {Function} options.onOpenSettings - 打开设置的回调
      */
     constructor(options) {
         this.sidebar = options.sidebar;
@@ -19,6 +20,7 @@ export class SidebarManager {
         this.conversationManager = options.conversationManager;
         this.onSwitchConversation = options.onSwitchConversation;
         this.onNewChat = options.onNewChat;
+        this.onOpenSettings = options.onOpenSettings;
         
         // 移动端菜单状态
         this.mobileMenuOpen = false;
@@ -31,20 +33,80 @@ export class SidebarManager {
      * 初始化侧边栏
      */
     init() {
-        // 绑定新建对话按钮事件
-        if (this.newChatBtn) {
-            this.newChatBtn.addEventListener('click', () => {
-                if (this.onNewChat && typeof this.onNewChat === 'function') {
-                    this.onNewChat();
-                }
-            });
+        // 新增顶部操作区
+        const header = document.createElement('div');
+        header.id = 'sidebar-header';
+        // 新建对话按钮
+        this.newChatBtn.className = 'flex items-center justify-center';
+        this.newChatBtn.innerHTML = '<span class="btn-text">新对话</span><span class="btn-plus">+</span>';
+        header.appendChild(this.newChatBtn);
+        // 搜索按钮
+        const searchBtn = document.createElement('button');
+        searchBtn.id = 'sidebar-search-btn';
+        searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+        header.appendChild(searchBtn);
+        // 搜索输入框
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.id = 'sidebar-search-input';
+        searchInput.placeholder = '对话历史查找';
+        header.appendChild(searchInput);
+        // 插入到侧边栏顶部
+        if (this.sidebar.firstChild) {
+            this.sidebar.insertBefore(header, this.sidebar.firstChild);
+        } else {
+            this.sidebar.appendChild(header);
         }
+        // 搜索按钮点击切换输入框
+        searchBtn.addEventListener('click', () => {
+            searchBtn.style.display = 'none';
+            searchInput.classList.add('active');
+            searchInput.style.display = 'block';
+            searchInput.focus();
+            // 隐藏新对话按钮文字，只保留加号
+            const textEl = this.newChatBtn.querySelector('.btn-text');
+            if (textEl) textEl.style.display = 'none';
+            this.newChatBtn.classList.add('compact-mode');
+        });
+        // 输入框失焦还原
+        searchInput.addEventListener('blur', () => {
+            searchInput.classList.remove('active');
+            searchInput.style.display = 'none';
+            searchBtn.style.display = 'flex';
+            searchInput.value = '';
+            this.renderConversationList(); // 还原全部
+            // 恢复新对话按钮文字
+            const textEl = this.newChatBtn.querySelector('.btn-text');
+            if (textEl) textEl.style.display = '';
+            this.newChatBtn.classList.remove('compact-mode');
+        });
+        // 回车时失焦
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') searchInput.blur();
+        });
+        // 搜索功能
+        searchInput.addEventListener('input', () => {
+            this.renderConversationList(searchInput.value.trim());
+        });
         
         // 添加移动设备菜单按钮
         this.addMobileMenuButton();
         
         // 渲染对话列表
         this.renderConversationList();
+
+        // 新建对话按钮点击事件重新绑定
+        this.newChatBtn.onclick = () => {
+            if (window.chatUI && window.chatUI.isGenerating) {
+                if (window.toast) {
+                    window.toast.warning('请等待当前回复生成完成再创建新对话');
+                }
+                return;
+            }
+            if (this.onNewChat && typeof this.onNewChat === 'function') {
+                this.onNewChat();
+            }
+        };
     }
     
     /**
@@ -137,14 +199,14 @@ export class SidebarManager {
     /**
      * 渲染对话列表
      */
-    renderConversationList() {
+    renderConversationList(keyword = '') {
         if (!this.conversationList) return;
-        
-        // 清空对话列表容器
         this.conversationList.innerHTML = '';
-        
-        // 获取所有对话
-        const conversations = this.conversationManager.getAllConversations();
+        let conversations = this.conversationManager.getAllConversations();
+        if (keyword) {
+            const kw = keyword.toLowerCase();
+            conversations = conversations.filter(c => c.title.toLowerCase().includes(kw));
+        }
         
         // 获取当前对话ID
         const currentConversation = this.conversationManager.getCurrentConversation();
@@ -154,7 +216,7 @@ export class SidebarManager {
         conversations.forEach(conversation => {
             const conversationItem = document.createElement('div');
             conversationItem.className = `flex items-center justify-between p-2 rounded-md hover:bg-openai-hover cursor-pointer group ${
-                conversation.id === currentConversationId ? 'bg-openai-hover' : ''
+                conversation.id === currentConversationId ? 'active' : ''
             } ${conversation.isPinned ? 'pinned-conversation' : ''}`;
             conversationItem.dataset.id = conversation.id;
             
@@ -201,6 +263,12 @@ export class SidebarManager {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200';
             
+            // 编辑按钮
+            const editButton = document.createElement('button');
+            editButton.className = 'p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500';
+            editButton.title = 'API设置';
+            editButton.innerHTML = '<i class="fas fa-cog text-xs"></i>';
+            
             // 置顶切换按钮
             const pinButton = document.createElement('button');
             pinButton.className = 'p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500';
@@ -214,6 +282,7 @@ export class SidebarManager {
             deleteButton.innerHTML = '<i class="fas fa-trash-alt text-xs"></i>';
             
             // 添加按钮到操作区
+            actionsDiv.appendChild(editButton);
             actionsDiv.appendChild(pinButton);
             actionsDiv.appendChild(deleteButton);
             
@@ -225,6 +294,14 @@ export class SidebarManager {
             
             // 绑定事件 - 点击对话项目
             contentDiv.addEventListener('click', () => {
+                // 检查是否有全局的ChatUI实例并且正在生成
+                if (window.chatUI && window.chatUI.isGenerating) {
+                    if (window.toast) {
+                        window.toast.warning('请等待当前回复生成完成再切换对话');
+                    }
+                    return;
+                }
+                
                 if (this.onSwitchConversation && typeof this.onSwitchConversation === 'function') {
                     this.onSwitchConversation(conversation.id);
                     
@@ -236,6 +313,14 @@ export class SidebarManager {
             // 绑定置顶事件
             pinButton.addEventListener('click', (e) => {
                 e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
+                
+                // 检查是否有全局的ChatUI实例并且正在生成
+                if (window.chatUI && window.chatUI.isGenerating) {
+                    if (window.toast) {
+                        window.toast.warning('请等待当前回复生成完成再修改对话状态');
+                    }
+                    return;
+                }
                 
                 this.conversationManager.togglePinStatus(conversation.id);
                 this.renderConversationList();
@@ -250,6 +335,14 @@ export class SidebarManager {
             // 绑定删除事件
             deleteButton.addEventListener('click', (e) => {
                 e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
+                
+                // 检查是否有全局的ChatUI实例并且正在生成
+                if (window.chatUI && window.chatUI.isGenerating) {
+                    if (window.toast) {
+                        window.toast.warning('请等待当前回复生成完成再删除对话');
+                    }
+                    return;
+                }
                 
                 // 删除对话
                 const isDeleted = this.conversationManager.deleteConversation(conversation.id);
@@ -287,6 +380,15 @@ export class SidebarManager {
                     if (toast) {
                         toast.error('删除对话失败');
                     }
+                }
+            });
+
+            // 绑定编辑按钮事件
+            editButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
+                
+                if (this.onOpenSettings && typeof this.onOpenSettings === 'function') {
+                    this.onOpenSettings();
                 }
             });
         });

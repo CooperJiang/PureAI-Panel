@@ -56,7 +56,6 @@ export class ApiClient {
         
         // 检查是否启用上下文
         const contextEnabled = this.settingsManager.get('contextEnabled', true);
-        console.log('API非流式请求 - 上下文启用状态:', contextEnabled, '类型:', typeof contextEnabled);
         
         // 构建最终消息数组
         let finalMessages = [];
@@ -87,14 +86,12 @@ export class ApiClient {
                 );
                 
                 finalMessages = [...finalMessages, ...formattedMessages];
-                console.log("上下文已开启，使用断点后的历史消息:", finalMessages.length);
             } else {
                 // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
                 finalMessages = [...finalMessages, ...messages.filter(msg => 
                     msg.content !== '' && 
                     ['user', 'assistant', 'system'].includes(msg.role)
                 )];
-                console.log("上下文已开启，使用全部历史消息:", finalMessages.length);
             }
         } else {
             // 上下文关闭：只添加最后一条用户消息
@@ -104,7 +101,6 @@ export class ApiClient {
                     break;
                 }
             }
-            console.log("上下文已关闭，只发送最后一条用户消息:", finalMessages.length);
             
             // 当关闭上下文时，记录当前位置为新的断点
             if (this.conversationManager) {
@@ -122,14 +118,29 @@ export class ApiClient {
                         // 创建断点元素
                         const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
                         
-                        // 找到用户刚发送的消息元素
-                        const userMessages = window.chatUI.chatMessages.querySelectorAll('.chat-end');
-                        if (userMessages.length > 0) {
-                            const latestUserMsg = userMessages[userMessages.length - 1];
-                            // 在最新的用户消息前插入断点
-                            latestUserMsg.parentNode.insertBefore(breakpointElement, latestUserMsg);
+                        // 获取所有消息元素
+                        const allMessages = window.chatUI.chatMessages.querySelectorAll('.chat');
+                        if (allMessages.length > 0) {
+                            // 修正: 计算UI中正确的插入位置
+                            // 获取消息列表中实际消息数量(不包括已有断点等非消息元素)
+                            const messageElements = Array.from(allMessages).filter(el => !el.classList.contains('context-breakpoint'));
+                            
+                            // 找到正确的插入位置，确保我们插入在正确位置之后的第一条消息之前
+                            // 如果latestBreakpoint恰好等于消息数量，则放在最后
+                            if (latestBreakpoint >= messageElements.length) {
+                                window.chatUI.chatMessages.appendChild(breakpointElement);
+                            } else {
+                                // 找到对应位置的消息并在其前面插入断点
+                                const targetMessage = messageElements[latestBreakpoint];
+                                if (targetMessage) {
+                                    window.chatUI.chatMessages.insertBefore(breakpointElement, targetMessage);
+                                } else {
+                                    // 如果找不到对应位置（异常情况），则添加到末尾
+                                    window.chatUI.chatMessages.appendChild(breakpointElement);
+                                }
+                            }
                         } else {
-                            // 如果找不到用户消息，添加到消息区域末尾
+                            // 如果没有消息，则添加到末尾
                             window.chatUI.chatMessages.appendChild(breakpointElement);
                         }
                         
@@ -155,7 +166,6 @@ export class ApiClient {
                         // 保留系统消息和从第一个用户消息开始的所有消息
                         const systemMessages = finalMessages.filter((msg, idx) => msg.role === 'system' && idx < firstUserIndex);
                         finalMessages = [...systemMessages, ...finalMessages.slice(firstUserIndex)];
-                        console.log("已调整消息顺序，确保首条非系统消息是用户消息");
                     }
                 }
             }
@@ -209,36 +219,36 @@ export class ApiClient {
      * @returns {Promise<void>}
      */
     async sendMessageStream(messages, model, onUpdate, onComplete, signal, config = {}) {
-        const baseUrl = this.settingsManager.get('baseUrl') || 'https://api.openai.com';
-        const apiKey = this.settingsManager.get('apiKey');
-        
-        if (!baseUrl || !apiKey) {
-            throw new Error('请先在设置中填写 Base URL 和 API Key。');
-        }
-        
-        if (!messages || messages.length === 0) {
-            throw new Error('消息列表为空，请输入至少一条消息');
-        }
-        
-        // 创建 AbortController 用于取消请求（如果未提供）
+        // 在函数开始处初始化localController
         let localController = null;
-        if (!signal) {
-            localController = new AbortController();
-            signal = localController.signal;
-        }
-        
-        this.currentStreamController = localController;
         
         try {
-            // 应用会话特定的配置
+            // 获取API基础URL和密钥
+            const baseUrl = this.settingsManager.get('baseUrl') || 'https://api.openai.com';
+            const apiKey = this.settingsManager.get('apiKey');
             const temperature = config.temperature !== undefined ? config.temperature : 0.7;
+            // 获取stream配置 - 优先使用config中的stream设置，如果未提供则使用settingsManager中的设置
+            const streamEnabled = config.stream !== undefined ? config.stream : this.settingsManager.get('streamEnabled', true);
+            
+            
+            if (!baseUrl || !apiKey) {
+                throw new Error('请先在设置中填写 Base URL 和 API Key。');
+            }
+            
+            if (!messages || messages.length === 0) {
+                throw new Error('消息列表为空，请输入至少一条消息');
+            }
+            
+            // 创建 AbortController 用于取消请求（如果未提供）
+            if (!signal) {
+                localController = new AbortController();
+                signal = localController.signal;
+            }
+            
+            this.currentStreamController = localController;
             
             // 检查是否启用上下文
             const contextEnabled = this.settingsManager.get('contextEnabled', true);
-            
-            // 添加调试日志
-            console.log('API上下文设置原始值:', localStorage.getItem('context_enabled'));
-            console.log('API上下文启用状态:', contextEnabled, '类型:', typeof contextEnabled);
             
             // 构建最终消息数组
             let finalMessages = [];
@@ -269,14 +279,12 @@ export class ApiClient {
                     );
                     
                     finalMessages = [...finalMessages, ...formattedMessages];
-                    console.log("上下文已开启，使用断点后的历史消息:", finalMessages.length);
                 } else {
                     // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
                     finalMessages = [...finalMessages, ...messages.filter(msg => 
                         msg.content !== '' && 
                         ['user', 'assistant', 'system'].includes(msg.role)
                     )];
-                    console.log("上下文已开启，使用全部历史消息:", finalMessages.length);
                 }
             } else {
                 // 上下文关闭：只添加最后一条用户消息
@@ -286,8 +294,6 @@ export class ApiClient {
                         break;
                     }
                 }
-                console.log("上下文已关闭，只发送最后一条用户消息:", finalMessages.length);
-                
                 // 当关闭上下文时，记录当前位置为新的断点
                 if (this.conversationManager) {
                     // 设置断点并获取是否成功
@@ -304,14 +310,29 @@ export class ApiClient {
                             // 创建断点元素
                             const breakpointElement = window.chatUI.ChatMessageComponent.createContextBreakpoint(latestBreakpoint);
                             
-                            // 找到用户刚发送的消息元素
-                            const userMessages = window.chatUI.chatMessages.querySelectorAll('.chat-end');
-                            if (userMessages.length > 0) {
-                                const latestUserMsg = userMessages[userMessages.length - 1];
-                                // 在最新的用户消息前插入断点
-                                latestUserMsg.parentNode.insertBefore(breakpointElement, latestUserMsg);
+                            // 获取所有消息元素
+                            const allMessages = window.chatUI.chatMessages.querySelectorAll('.chat');
+                            if (allMessages.length > 0) {
+                                // 修正: 计算UI中正确的插入位置
+                                // 获取消息列表中实际消息数量(不包括已有断点等非消息元素)
+                                const messageElements = Array.from(allMessages).filter(el => !el.classList.contains('context-breakpoint'));
+                                
+                                // 找到正确的插入位置，确保我们插入在正确位置之后的第一条消息之前
+                                // 如果latestBreakpoint恰好等于消息数量，则放在最后
+                                if (latestBreakpoint >= messageElements.length) {
+                                    window.chatUI.chatMessages.appendChild(breakpointElement);
+                                } else {
+                                    // 找到对应位置的消息并在其前面插入断点
+                                    const targetMessage = messageElements[latestBreakpoint];
+                                    if (targetMessage) {
+                                        window.chatUI.chatMessages.insertBefore(breakpointElement, targetMessage);
+                                    } else {
+                                        // 如果找不到对应位置（异常情况），则添加到末尾
+                                        window.chatUI.chatMessages.appendChild(breakpointElement);
+                                    }
+                                }
                             } else {
-                                // 如果找不到用户消息，添加到消息区域末尾
+                                // 如果没有消息，则添加到末尾
                                 window.chatUI.chatMessages.appendChild(breakpointElement);
                             }
                             
@@ -337,13 +358,29 @@ export class ApiClient {
                             // 保留系统消息和从第一个用户消息开始的所有消息
                             const systemMessages = finalMessages.filter((msg, idx) => msg.role === 'system' && idx < firstUserIndex);
                             finalMessages = [...systemMessages, ...finalMessages.slice(firstUserIndex)];
-                            console.log("已调整消息顺序，确保首条非系统消息是用户消息");
                         }
                     }
                 }
             }
             
-            console.log('发送消息数组:', finalMessages);
+            // 修复：检查最终消息数组是否为空，如果为空则添加最后一条用户消息
+            if (finalMessages.length === 0 && messages.length > 0) {
+                // 查找最后一条用户消息
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].role === 'user' && messages[i].content !== '') {
+                        finalMessages.push(messages[i]);
+                        break;
+                    }
+                }
+                
+                // 如果仍然没有找到任何用户消息，创建一个临时的用户消息
+                if (finalMessages.length === 0) {
+                    finalMessages.push({
+                        role: 'user',
+                        content: '请帮助我。'
+                    });
+                }
+            }
             
             // 发起请求
             const response = await fetch(`${baseUrl}/v1/chat/completions`, {
@@ -356,7 +393,7 @@ export class ApiClient {
                     model: model,
                     messages: finalMessages,
                     temperature: temperature,
-                    stream: true
+                    stream: streamEnabled // 使用配置值决定是否流式输出
                 }),
                 signal: signal
             });
@@ -364,6 +401,42 @@ export class ApiClient {
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error?.message || '请求失败');
+            }
+            
+            // 添加非流式响应处理：如果streamEnabled为false，直接获取完整响应
+            if (!streamEnabled) {
+                try {
+                    // 解析完整的JSON响应
+                    const data = await response.json();
+                    
+                    // 从choices中提取助手消息
+                    const assistantMessage = data.choices?.[0]?.message?.content || '';
+                    
+                    // 记录token用量（如果API返回）
+                    if (data.usage) {
+                        this.lastTokenUsage = {
+                            total: data.usage.total_tokens || 0,
+                            prompt: data.usage.prompt_tokens || 0,
+                            completion: data.usage.completion_tokens || 0
+                        };
+                    }
+                    
+                    
+                    // 调用更新回调
+                    if (onUpdate && typeof onUpdate === 'function') {
+                        onUpdate(assistantMessage);
+                    } 
+                    
+                    // 调用完成回调
+                    if (onComplete && typeof onComplete === 'function') {
+                        onComplete();
+                    } 
+                    
+                    return assistantMessage;
+                } catch (jsonError) {
+                    console.error("非流式响应解析错误:", jsonError);
+                    throw new Error('无法解析API响应: ' + jsonError.message);
+                }
             }
             
             // 处理流式响应
@@ -488,21 +561,7 @@ export class ApiClient {
     }
     
     /**
-     * streamMessage别名 - 兼容性方法，调用sendMessageStream
-     * @param {Array} messages - 消息数组
-     * @param {string} model - 模型ID
-     * @param {Function} onUpdate - 更新回调
-     * @param {Function} onComplete - 完成回调
-     * @param {AbortSignal} signal - 中止信号
-     * @param {Object} config - 会话特定的配置
-     * @returns {Promise<void>}
-     */
-    async streamMessage(messages, model, onUpdate, onComplete, signal, config = {}) {
-        return this.sendMessageStream(messages, model, onUpdate, onComplete, signal, config);
-    }
-    
-    /**
-     * generateChatCompletion - 用于生成聊天完成，sendMessageStream的别名
+     * generateChatCompletion - 用于生成聊天完成（推荐使用的流式输出方法）
      * @param {Array} messages - 消息数组
      * @param {string} model - 模型ID
      * @param {Function} onUpdate - 更新回调
@@ -514,7 +573,38 @@ export class ApiClient {
      */
     async generateChatCompletion(messages, model, onUpdate, onComplete, onError, signal, config = {}) {
         const messagesCount = messages?.length;
-        const isStream = true;
+        // 从settingsManager读取streamEnabled设置
+        const isStream = this.settingsManager.get('streamEnabled', true);
+        
+        // 将streamEnabled设置合并到config中
+        config = { ...config, stream: isStream };
+        
+        // 添加检查，确保消息数组不为空
+        if (!messages || messages.length === 0) {
+            if (onError && typeof onError === 'function') {
+                onError(new Error('消息列表为空，无法发送请求'));
+                return;
+            } else {
+                throw new Error('消息列表为空，无法发送请求');
+            }
+        }
+        
+        // 确保消息数组中至少有一条用户消息
+        let hasUserMessage = false;
+        for (const msg of messages) {
+            if (msg.role === 'user' && msg.content) {
+                hasUserMessage = true;
+                break;
+            }
+        }
+        
+        if (!hasUserMessage) {
+            // 如果没有用户消息，添加一个默认的
+            messages.push({
+                role: 'user',
+                content: '请帮助我。'
+            });
+        }
         
         // 确保之前的请求已经被取消
         if (this.currentStreamController) {

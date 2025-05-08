@@ -92,10 +92,10 @@
 /* 发送按钮样式 */
 .send-button {
     position: absolute;
-    bottom: 8px;
+    bottom: 10px;
     right: 12px;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,17 +194,26 @@
     color: var(--text-tertiary);
 }
 
-/* 状态指示器和停止按钮定位修正 */
-#sendingIndicator,
-#stopButton {
+/* 状态指示器定位修正 */
+#sendingIndicator {
     position: absolute;
-    right: 50px;
-    bottom: 12px;
+    right: 12px;
+    bottom: 16px;
+    height: 24px;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    z-index: 10;
 }
 
-#stopButton:hover {
-    color: #e53935;
-    background-color: rgba(229, 57, 53, 0.1);
+#sendingIndicator i {
+    font-size: 0.8rem;
+    color: white;
+    font-size: 12px;
 }
 
 /* 底部按钮样式 */
@@ -262,13 +271,14 @@
     }
     
     .send-button {
-        width: 26px;
-        height: 26px;
-        margin-right: 0.5rem;
+        width: 24px;
+        height: 24px;
+        bottom: 8px;
+        right: 12px;
     }
     
     .send-button i {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
     
     .token-counter {
@@ -286,9 +296,15 @@
         height: 24px;
     }
     
-    #sendingIndicator,
-    #stopButton {
-        right: 3rem;
+    #sendingIndicator {
+        width: 24px;
+        height: 24px;
+        bottom: 8px;
+        right: 10px;
+    }
+    
+    #sendingIndicator i {
+        font-size: 0.7rem;
     }
     
     .button-bottom {

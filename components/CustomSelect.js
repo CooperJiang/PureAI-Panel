@@ -23,6 +23,9 @@ export class CustomSelect {
         this.isOpen = false;
         this.selectedOption = this.options.find(opt => opt.id === this.value);
         
+        // 初始化文档点击处理器
+        this._documentClickHandler = null;
+        
         this.render();
         this.bindEvents();
     }
@@ -115,10 +118,21 @@ export class CustomSelect {
             });
         });
         
-        // 点击其他地方关闭下拉菜单
-        document.addEventListener('click', () => {
-            this.closeDropdown();
-        });
+        // 移除旧的点击其他地方关闭事件（如果存在）
+        if (this._documentClickHandler) {
+            document.removeEventListener('click', this._documentClickHandler);
+        }
+        
+        // 定义并存储文档点击处理函数
+        this._documentClickHandler = (e) => {
+            // 如果点击的不是下拉菜单内的元素，则关闭下拉菜单
+            if (!this.element.contains(e.target) && this.isOpen) {
+                this.closeDropdown();
+            }
+        };
+        
+        // 添加全局点击事件监听
+        document.addEventListener('click', this._documentClickHandler);
         
         // 阻止下拉菜单点击事件冒泡
         dropdown.addEventListener('click', (e) => {
@@ -373,6 +387,23 @@ export class CustomSelect {
                 buttonText.classList.add('text-gray-400', 'dark:text-gray-500');
                 buttonText.classList.remove('text-gray-700', 'dark:text-gray-200');
             }
+        }
+    }
+    
+    /**
+     * 清理资源，移除事件监听器
+     * 在组件不再需要使用时应调用此方法
+     */
+    destroy() {
+        // 移除文档点击事件监听器
+        if (this._documentClickHandler) {
+            document.removeEventListener('click', this._documentClickHandler);
+            this._documentClickHandler = null;
+        }
+        
+        // 移除自定义选择器的DOM元素
+        if (this.element && this.element.parentNode) {
+            this.element.parentNode.removeChild(this.element);
         }
     }
 } 

@@ -141,7 +141,21 @@ export class ConversationManager {
         let messages = conversation.messages.slice(latestBreakpoint).filter(msg => msg.type !== 'breakpoint');
         
         // 确保消息序列有效（首条必须是用户消息）
-        return this._ensureValidMessageSequence(messages);
+        let validMessages = this._ensureValidMessageSequence(messages);
+        
+        // 修复：如果断点后没有有效的消息，找到最后一条用户消息
+        if (validMessages.length === 0) {
+            // 从所有消息中找出最后一条用户消息
+            for (let i = conversation.messages.length - 1; i >= 0; i--) {
+                const msg = conversation.messages[i];
+                if (msg.role === 'user' && msg.content && !msg.type) {
+                    validMessages = [msg];
+                    break;
+                }
+            }
+        }
+        
+        return validMessages;
     }
     
     /**
