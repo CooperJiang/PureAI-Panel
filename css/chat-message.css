@@ -145,27 +145,6 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* 光标动画 */
-.cursor-blink {
-    display: inline-block;
-    width: 2px;
-    height: 1.2em;
-    background-color: #10a37f;
-    animation: cursor-blink 1s step-end infinite;
-    vertical-align: text-bottom;
-    margin-left: 1px;
-    position: relative;
-}
-
-@keyframes cursor-blink {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 1; }
-}
-
-[data-theme="dark"] .cursor-blink {
-    background-color: #7dd3fc;
-}
-
 /* 错误消息 */
 .error-message {
     color: #ef4444;

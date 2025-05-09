@@ -593,9 +593,10 @@ export class CodeBlockManager {
         
         preElement.setAttribute('data-autoscroll', 'true');
         
-        // 当前生成状态下不限制高度
-        preElement.style.maxHeight = 'none';
-        preElement.style.overflowY = 'hidden';
+        // 确保添加了code-block-container类
+        if (!preElement.classList.contains('code-block-container')) {
+            preElement.classList.add('code-block-container');
+        }
         
         // 获取代码高度
         const codeHeight = codeElement.offsetHeight;
@@ -637,21 +638,8 @@ export class CodeBlockManager {
                 clearInterval(this.scrollInterval);
                 this.scrollInterval = null;
                 
-                // 添加过渡效果
-                preElement.style.transition = 'max-height 0.3s ease-in-out';
-                
-                // 确保设置了正确的属性
-                setTimeout(() => {
-                    preElement.style.maxHeight = '400px';
-                    preElement.style.overflowY = 'auto';
-                    preElement.style.removeProperty('min-height');
-                    preElement.setAttribute('data-generating', 'false');
-                    
-                    // 300ms后移除过渡效果
-                    setTimeout(() => {
-                        preElement.style.transition = '';
-                    }, 300);
-                }, 100);
+                // 更新代码块状态
+                preElement.setAttribute('data-generating', 'false');
             }
         }, 100);
     }
@@ -1138,8 +1126,10 @@ export class CodeBlockManager {
     updateCodeBlockHeight(preElement) {
         if (!preElement) return;
         
-        const codeElement = preElement.querySelector('code');
-        if (!codeElement) return;
+        // 检查是否已添加code-block-container类
+        if (!preElement.classList.contains('code-block-container')) {
+            preElement.classList.add('code-block-container');
+        }
         
         // 更精确地检查是否在生成中：
         // 1. 检查是否有全局生成状态
@@ -1152,51 +1142,10 @@ export class CodeBlockManager {
         // 只有全局生成状态和属于生成中消息的代码块才应用特殊样式
         const isGenerating = isGlobalGenerating && isInGeneratingMessage;
         
-        // 如果是首次设置高度
-        if (!preElement.dataset.heightStabilized) {
-            preElement.dataset.heightStabilized = 'true';
-            
-            // 根据是否在生成中设置不同样式
-            if (isGenerating) {
-                // 生成中的代码块：无限高度，隐藏滚动条
-                preElement.style.minHeight = '100px';
-                preElement.style.maxHeight = 'none';
-                preElement.style.overflowY = 'hidden';
-                preElement.setAttribute('data-generating', 'true');
-            } else {
-                // 非生成中的代码块：固定最大高度，显示滚动条
-                preElement.style.maxHeight = '400px';
-                preElement.style.overflowY = 'auto';
-                preElement.style.removeProperty('min-height');
-                preElement.setAttribute('data-generating', 'false');
-            }
-        }
-        // 如果代码块已经完成渲染
-        else if (preElement.dataset.heightStabilized === 'true') {
-            // 状态转换：从生成中到完成
-            if (!isGenerating && preElement.getAttribute('data-generating') === 'true') {
-                // 添加过渡动画
-                preElement.style.transition = 'max-height 0.3s ease-in-out';
-                // 设置固定高度和滚动
-                preElement.style.maxHeight = '400px';
-                preElement.style.overflowY = 'auto';
-                preElement.style.removeProperty('min-height');
-                preElement.setAttribute('data-generating', 'false');
-                
-                // 300ms后移除过渡效果
-                setTimeout(() => {
-                    preElement.style.transition = '';
-                }, 300);
-            }
-            // 状态转换：从完成到生成中（罕见情况，但为了完整性）
-            else if (isGenerating && preElement.getAttribute('data-generating') === 'false') {
-                // 设置无限高度
-                preElement.style.maxHeight = 'none';
-                preElement.style.overflowY = 'hidden';
-                preElement.style.minHeight = '100px';
-                preElement.setAttribute('data-generating', 'true');
-            }
-        }
+        // 设置代码块状态
+        preElement.setAttribute('data-generating', isGenerating ? 'true' : 'false');
+        
+        // 不再直接设置样式，而是通过data-generating属性和CSS规则控制
     }
     
     /**

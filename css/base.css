@@ -87,22 +87,8 @@
     transition: height 0.1s;
 }
 
-/* 流式响应的闪烁光标 */
-.cursor-blink {
-    display: inline-block;
-    width: 0.5rem;
-    height: 1.2rem;
-    background-color: var(--text-tertiary);
-    margin-left: 0.1rem;
-    animation: blink 1s infinite;
-    vertical-align: middle;
-    opacity: 0.7;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 0; }
-}
+/* 流式响应的闪烁光标 - 已移至animations.css */
+/* .cursor-blink 样式已移至animations.css中统一管理 */
 
 /* 动画过渡效果 */
 .fade-in {

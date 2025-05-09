@@ -255,12 +255,12 @@
             if (contextToggleBtn && contextStatusText) {
                 // 初始化显示当前状态
                 const isContextEnabled = settingsManager.get('contextEnabled', true);
-                contextStatusText.textContent = isContextEnabled ? '上下文开启' : '上下文关闭';
+                contextStatusText.textContent = isContextEnabled ? '上下文开启中' : '上下文关闭中';
                 
                 // 切换事件
                 contextToggleBtn.addEventListener('click', () => {
                     const newState = settingsManager.toggle('contextEnabled');
-                    contextStatusText.textContent = newState ? '上下文开启' : '上下文关闭';
+                    contextStatusText.textContent = newState ? '上下文开启中' : '上下文关闭中';
                     
                     // 当切换上下文状态时，在当前位置设置断点
                     if (conversationManager) {
