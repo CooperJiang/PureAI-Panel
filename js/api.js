@@ -40,7 +40,7 @@ export class ApiClient {
      * @returns {Promise<Object>} - 响应对象
      */
     async sendMessage(messages, model, signal, config = {}) {
-        const baseUrl = this.settingsManager.get('baseUrl') || 'https://api.openai.com';
+        const baseUrl = this.settingsManager.get('baseUrl') || 'https://pool.mmmss.com';
         const apiKey = this.settingsManager.get('apiKey');
         
         if (!baseUrl || !apiKey) {
@@ -224,7 +224,7 @@ export class ApiClient {
         
         try {
             // 获取API基础URL和密钥
-            const baseUrl = this.settingsManager.get('baseUrl') || 'https://api.openai.com';
+            const baseUrl = this.settingsManager.get('baseUrl') || 'https://pool.mmmss.com';
             const apiKey = this.settingsManager.get('apiKey');
             const temperature = config.temperature !== undefined ? config.temperature : 0.7;
             // 获取stream配置 - 优先使用config中的stream设置，如果未提供则使用settingsManager中的设置

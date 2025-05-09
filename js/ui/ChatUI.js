@@ -236,9 +236,10 @@ export class ChatUI {
                                             
                                             // 避免在正在生成的消息中进行代码高亮，减少性能消耗
                                             const messageElement = block.closest('.chat');
-                                            const isGeneratingWithCursor = messageElement?.querySelector('.cursor-blink') !== null;
+                                            // 由于我们已删除了cursor-blink，所以这里直接判断是否在生成中
+                                            const isGenerating = this.isGenerating;
                                             
-                                            if (!isGeneratingWithCursor) {
+                                            if (!isGenerating) {
                                                 try {
                                                     hljs.highlightElement(block);
                                                 } catch (e) {
@@ -1620,6 +1621,11 @@ export class ChatUI {
             // 重置输入框高度
             this.messageInput.style.height = '40px';
             this.adjustTextareaHeight();
+            
+            // AI回复结束后自动聚焦输入框
+            setTimeout(() => {
+                this.messageInput.focus();
+            }, 100); // 短暂延迟确保UI更新完成
         }
     }
     

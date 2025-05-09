@@ -85,4 +85,8 @@ test/coverage/
 .temp/
 Thumbs.db
 ehthumbs.db
-$RECYCLE.BIN/ 
+$RECYCLE.BIN/
+
+# 部署相关
+deploy.conf
+tmp_*.sh 

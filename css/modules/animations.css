@@ -10,7 +10,7 @@
 
 /* 流式响应的闪烁光标 */
 .cursor-blink {
-    display: inline-block;
+    display: none;
     width: 3px;
     height: 1.2em;
     background-color: var(--primary-color, #10a37f);

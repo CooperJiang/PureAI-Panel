@@ -45,7 +45,7 @@ export class SettingsModalComponent {
                                     type="text" 
                                     id="baseUrl" 
                                     class="w-full pl-10 pr-4 py-2 border border-openai-border rounded-md focus:outline-none focus:ring-1 focus:ring-openai-green dark:bg-[#343541] dark:text-white" 
-                                    placeholder="例如: https://api.openai.com" 
+                                    placeholder="例如: https://api.openai.com 结尾不要带/" 
                                     value="${this.settingsManager.get('baseUrl')}">
                             </div>
                         </div>

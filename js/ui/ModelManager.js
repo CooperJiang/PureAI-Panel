@@ -24,10 +24,10 @@ export class ModelManager {
         // 内置模型列表
         this.builtInModels = [
             { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-            { id: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini (2024-07-18)' },
             { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
-            { id: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini (2025-04-14)' },
             { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano' },
+            { id: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini (2025-04-14)' },
+            { id: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini (2024-07-18)' },
             { id: 'gpt-4.1-nano-2025-04-14', name: 'GPT-4.1 Nano (2025-04-14)' }
         ];
         
@@ -187,17 +187,6 @@ export class ModelManager {
         // 添加样式
         this.dropdownContent.classList.add('bg-white', 'dark:bg-gray-800', 'rounded-md', 'shadow-lg', 'border', 'border-gray-200', 'dark:border-gray-700', 'overflow-hidden', 'max-h-64', 'overflow-y-auto');
         
-        // 添加头部
-        const header = document.createElement('div');
-        header.className = 'px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between';
-        header.innerHTML = `
-            <span class="font-medium text-gray-700 dark:text-gray-300">选择模型</span>
-            <button class="add-model-btn" title="添加自定义模型">
-                <i class="fas fa-plus text-xs"></i>
-            </button>
-        `;
-        this.dropdownContent.appendChild(header);
-        
         // 添加内置模型部分
         const builtInSection = document.createElement('div');
         builtInSection.className = 'py-1';
@@ -211,17 +200,21 @@ export class ModelManager {
         this.builtInModels.forEach(model => {
             const isSelected = model.id === this.currentModel;
             const modelItem = document.createElement('div');
-            modelItem.className = `px-4 py-2 cursor-pointer flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
+            modelItem.className = `px-4 py-1 text-sm cursor-pointer flex items-center justify-between ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
             modelItem.dataset.modelId = model.id;
             modelItem.dataset.modelName = model.name;
             modelItem.innerHTML = `
                 <span class="model-name flex-1 truncate" title="${model.name}">${model.name}</span>
-                ${isSelected ? '<i class="fas fa-check ml-2 text-blue-600 dark:text-blue-400"></i>' : ''}
+                <div class="flex items-center">
+                    ${isSelected ? '<i class="fas fa-check text-blue-600 dark:text-blue-400"></i>' : ''}
+                </div>
             `;
             
             // 添加点击事件
             modelItem.addEventListener('click', () => {
                 this.selectModel(model.id, model.name);
+                // 刷新下拉菜单以更新勾选状态
+                this.createCustomDropdown();
                 this.closeDropdown();
             });
             
@@ -245,7 +238,7 @@ export class ModelManager {
             customModels.forEach(model => {
                 const isSelected = model.id === this.currentModel;
                 const modelItem = document.createElement('div');
-                modelItem.className = `px-4 py-2 cursor-pointer flex items-center justify-between group ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
+                modelItem.className = `px-4 py-1 text-sm cursor-pointer flex items-center justify-between group ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`;
                 modelItem.dataset.modelId = model.id;
                 modelItem.dataset.modelName = model.name;
                 modelItem.innerHTML = `
@@ -278,6 +271,8 @@ export class ModelManager {
                     } else {
                         // 模型项点击选择模型
                         this.selectModel(model.id, model.name);
+                        // 刷新下拉菜单以更新勾选状态
+                        this.createCustomDropdown();
                         this.closeDropdown();
                     }
                 });
@@ -292,9 +287,9 @@ export class ModelManager {
         const addModelSection = document.createElement('div');
         addModelSection.className = 'px-4 py-2 border-t border-gray-200 dark:border-gray-700';
         addModelSection.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <input type="text" placeholder="输入新模型ID" class="new-model-input flex-1 text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                <button class="add-model-btn-input">添加</button>
+            <div class="flex items-center space-x-1">
+                <input type="text" placeholder="输入新模型ID" class="w-0 new-model-input flex-1 text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <button class="add-model-btn-input">+</button>
             </div>
         `;
         
@@ -324,14 +319,6 @@ export class ModelManager {
         });
         
         this.dropdownContent.appendChild(addModelSection);
-        
-        // 添加全局点击按钮到头部 - 点击打开窗口或聚焦输入框
-        const headerAddBtn = header.querySelector('.add-model-btn');
-        headerAddBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // 聚焦到新模型输入框
-            modelInput.focus();
-        });
     }
     
     /**
@@ -348,7 +335,7 @@ export class ModelManager {
         // 设置下拉框位置（考虑滚动位置）
         this.dropdownContent.style.top = `${buttonRect.bottom + scrollY + 4}px`;
         this.dropdownContent.style.left = `${buttonRect.left + scrollX}px`;
-        this.dropdownContent.style.width = `${Math.max(buttonRect.width, 240)}px`;
+        this.dropdownContent.style.width = `${Math.max(buttonRect.width, 300)}px`;
     }
     
     /**
@@ -655,7 +642,7 @@ export class ModelManager {
     truncateModelName(name) {
         if (!name) return '';
         
-        const maxLength = 16;
+        const maxLength = 24; // 增加最大长度
         if (name.length <= maxLength) return name;
         
         return name.substring(0, maxLength - 2) + '...';

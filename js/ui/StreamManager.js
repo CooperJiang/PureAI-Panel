@@ -108,11 +108,6 @@ export class StreamManager {
         // 更新内容
         contentElement.innerHTML = formattedContent;
         
-        // 确保光标在最后
-        const cursorElement = document.createElement('span');
-        cursorElement.className = 'cursor-blink';
-        contentElement.appendChild(cursorElement);
-        
         // 为新内容中的代码块添加交互按钮和高亮
         formatter.addCodeInteractionButtons();
         this.chatComponent.applyCodeHighlightingToElement(contentElement);
@@ -179,10 +174,6 @@ export class StreamManager {
             return;
         }
         this.streamAnimationData.lastUpdateTime = now;
-        
-        // 移除所有现有光标以避免多个光标
-        const existingCursors = contentElement.querySelectorAll('.cursor-blink');
-        existingCursors.forEach(cursor => cursor.remove());
         
         // 检查特殊格式，如代码块、图片链接等需要完全渲染的情况
         const isSpecialFormat = this.streamAnimationData && (
@@ -308,9 +299,6 @@ export class StreamManager {
                     const messageId = this.streamAnimationData.messageId;
                     const finalContent = this.streamAnimationData.fullContent;
                     
-                    // 移除所有光标元素
-                    document.querySelectorAll(`#${messageId} .cursor-blink`).forEach(el => el.remove());
-                    
                     this.streamAnimationData.isAnimating = false;
                     
                     // 如果有完成回调，调用它
@@ -326,11 +314,6 @@ export class StreamManager {
         // 请求下一帧动画
         if (this.streamAnimationData && this.streamAnimationData.isAnimating) {
             requestAnimationFrame(() => this.animateText());
-        } else {
-            // 如果动画被外部停止，确保删除所有光标
-            if (this.streamAnimationData && this.streamAnimationData.messageId) {
-                document.querySelectorAll(`#${this.streamAnimationData.messageId} .cursor-blink`).forEach(el => el.remove());
-            }
         }
     }
     
@@ -340,18 +323,6 @@ export class StreamManager {
     scrollToBottom() {
         if (this.onScroll && typeof this.onScroll === 'function') {
             this.onScroll();
-        }
-    }
-    
-    /**
-     * 清除光标
-     * @param {string} messageId - 可选的消息ID，如果提供则只清除该消息中的光标
-     */
-    clearCursors(messageId) {
-        if (messageId) {
-            document.querySelectorAll(`#${messageId} .cursor-blink`).forEach(el => el.remove());
-        } else {
-            document.querySelectorAll('.cursor-blink').forEach(el => el.remove());
         }
     }
     

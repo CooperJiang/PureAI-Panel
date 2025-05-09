@@ -136,11 +136,6 @@ export class MessageHandler {
         // 更新内容
         contentElement.innerHTML = formattedContent;
         
-        // 确保光标在最后
-        const cursorElement = document.createElement('span');
-        cursorElement.className = 'cursor-blink';
-        contentElement.appendChild(cursorElement);
-        
         // 为新内容中的代码块添加交互按钮和高亮
         formatter.addCodeInteractionButtons();
         this.chatComponent.applyCodeHighlightingToElement(contentElement);
@@ -565,10 +560,6 @@ export class MessageHandler {
             }
         } else {
         }
-        
-        // 移除所有光标
-        const cursors = document.querySelectorAll(`#${messageId} .cursor-blink`);
-        cursors.forEach(cursor => cursor.remove());
         
         // 确保设置消息内容属性用于后续编辑
         const messageElement = document.getElementById(messageId);

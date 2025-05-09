@@ -369,8 +369,8 @@ export class ConversationManager {
         conversation.messages.push(message);
         conversation.updatedAt = new Date().toISOString();
         
-        // 自动更新对话标题（如果是第一条用户消息）
-        if (role === 'user' && conversation.messages.filter(m => m.role === 'user').length === 1) {
+        // 自动更新对话标题（如果是第一条用户消息且当前标题是默认标题）
+        if (role === 'user' && conversation.messages.filter(m => m.role === 'user').length === 1 && conversation.title === '新对话') {
             // 使用用户的第一条消息作为对话标题（截取前20个字符）
             let title = content.trim().split('\n')[0];
             if (title.length > 20) {
@@ -454,8 +454,8 @@ export class ConversationManager {
         // 更新对话时间戳
         conversation.updatedAt = new Date().toISOString();
         
-        // 自动更新对话标题（如果是第一条用户消息）
-        if (conversation.messages.filter(m => m.role === 'user').length === 1) {
+        // 自动更新对话标题（如果是第一条用户消息且当前标题是默认标题）
+        if (conversation.messages.filter(m => m.role === 'user').length === 1 && conversation.title === '新对话') {
             // 使用用户的第一条消息作为对话标题（截取前20个字符）
             let title = userMessage.trim().split('\n')[0];
             if (title.length > 20) {

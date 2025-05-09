@@ -215,7 +215,7 @@
 /* 模型选择按钮 */
 #modelDropdownButton {
     background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
+    /* border: 1px solid #e2e8f0; */
     color: #0f172a;
     border-radius: 0.375rem;
     padding: 0.5rem 0.75rem;
@@ -224,6 +224,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    outline: none;
 }
 
 #modelDropdownButton:hover {
@@ -234,7 +235,6 @@
 #modelDropdownButton:focus {
     outline: none;
     border-color: #0ea5e9;
-    box-shadow: 0 0 0 1px #0ea5e9;
 }
 
 #modelDropdownButton i {
@@ -247,7 +247,7 @@
 }
 
 #selectedModel {
-    max-width: 150px;
+    max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -315,18 +315,18 @@
 
 /* 添加模型按钮 - 底部提交按钮 */
 .add-model-btn-input {
-    height: 36px;
-    padding: 0 12px;
+    height: 30px;
+    width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background-color: #0ea5e9;
     color: white;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 500;
     border-radius: 0.375rem;
     border: none;
     transition: background-color 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .add-model-btn-input:hover {

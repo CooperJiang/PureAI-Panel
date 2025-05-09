@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PureAI对话</title>
     
+    <!-- 百度统计代码 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?2b09e233276d57619d1ec3f1237e6a55";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+    
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     
@@ -108,7 +119,7 @@
         <header class="py-1 px-3 border-b border-border-color dark:border-border-color flex items-center justify-between bg-secondary-bg dark:bg-secondary-bg">
             <!-- 模型选择 -->
             <div id="modelDropdown" class="relative inline-block z-10">
-                <button id="modelDropdownButton" class="bg-background dark:bg-secondary-bg border border-border-color dark:border-border-color hover:bg-tertiary-bg dark:hover:bg-tertiary-bg py-2 px-3 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors">
+                <button id="modelDropdownButton" class="bg-background dark:bg-secondary-bg border border-border-color dark:border-border-color hover:bg-tertiary-bg dark:hover:bg-tertiary-bg py-2 px-3 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors min-w-[220px]">
                     <i class="fas fa-robot text-primary dark:text-primary text-sm"></i>
                     <span id="selectedModel" class="text-txt-primary dark:text-txt-primary">加载中...</span>
                     <i class="fas fa-chevron-down text-xs text-txt-secondary dark:text-txt-secondary"></i>
@@ -121,6 +132,12 @@
             <!-- 右侧工具栏 -->
             <div class="flex items-center gap-3">
                 <!-- 使用带有更好视觉效果的按钮 -->
+                <button id="announcementBtn" class="btn-action group" title="查看公告">
+                    <div class="btn-action-content">
+                        <i class="fas fa-bullhorn text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
+                    </div>
+                </button>
+                
                 <button id="themeBtn" class="btn-action group" title="切换主题">
                     <div class="btn-action-content">
                         <i class="fas fa-moon text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
@@ -138,6 +155,12 @@
                         <i class="fas fa-trash text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
                     </div>
                 </button>
+                
+                <a href="https://github.com/CooperJiang/PureAI-Panel" target="_blank" class="btn-action group" title="GitHub开源地址">
+                    <div class="btn-action-content">
+                        <i class="fab fa-github text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
+                    </div>
+                </a>
                 
                 <!-- 移动端菜单按钮 -->
                 <button id="mobileMenuBtn" class="btn-action group md:hidden" title="菜单">
@@ -184,9 +207,21 @@
                     
                     <!-- 底部信息栏 -->
                     <div class="flex justify-between items-center mt-2">
-                        <!-- AI助手提示信息 -->
-                        <div class="text-xs text-txt-secondary dark:text-txt-secondary">
-                            AI 助手由 PureAI Panel version 1.0.0 提供支持
+                        <!-- 赞助商信息 -->
+                        <div class="text-xs text-txt-secondary dark:text-txt-secondary flex gap-3 items-center">
+                            <div class="flex items-center">
+                                <i class="fas fa-robot text-primary dark:text-primary mr-1.5"></i>
+                                <span>AI服务由</span>
+                                <a href="https://nineai.chat/chat" target="_blank" rel="noopener" class="text-primary dark:text-primary font-medium mx-1 hover:underline">NineAi</a>
+                                <span>免费提供</span>
+                            </div>
+                            <span>|</span>
+                            <div class="flex items-center">
+                                <i class="fas fa-image text-primary dark:text-primary mr-1.5"></i>
+                                <span>图片存储服务由</span>
+                                <a href="http://pixelpunk.cc/" target="_blank" rel="noopener" class="text-primary dark:text-primary font-medium mx-1 hover:underline">PixelPunk AI图床</a>
+                                <span>免费提供</span>
+                            </div>
                         </div>
                         
                         <!-- 底部功能按钮组 -->
@@ -326,12 +361,13 @@
             }
             
             // 检查必要设置
-            if (!settingsManager.hasRequiredSettings()) {
-                // 如果未设置API密钥，显示设置弹窗
-                setTimeout(() => {
-                    chatUI.openSettingsModal();
-                }, 500);
-            }
+            // 由于已提供默认的代理地址，不再需要自动弹出设置弹窗
+            // if (!settingsManager.hasRequiredSettings()) {
+            //     // 如果未设置API密钥，显示设置弹窗
+            //     setTimeout(() => {
+            //         chatUI.openSettingsModal();
+            //     }, 500);
+            // }
             
             // 初始化主题切换
             const themeBtn = document.getElementById('themeBtn');
@@ -394,7 +430,134 @@
                 },
                 breaks: true
             });
+            
+            // 公告弹窗管理
+            const announcementModal = document.getElementById('announcementModal');
+            const announcementBtn = document.getElementById('announcementBtn');
+            const closeAnnouncementBtn = document.getElementById('closeAnnouncementBtn');
+            const confirmAnnouncementBtn = document.getElementById('confirmAnnouncementBtn');
+            const doNotShowAgain = document.getElementById('doNotShowAgain');
+            
+            // 显示公告弹窗
+            function showAnnouncementModal() {
+                if (announcementModal) {
+                    announcementModal.classList.remove('hidden');
+                }
+            }
+            
+            // 隐藏公告弹窗
+            function hideAnnouncementModal() {
+                if (announcementModal) {
+                    announcementModal.classList.add('hidden');
+                }
+            }
+            
+            // 检查是否在7天内不再显示公告
+            function shouldShowAnnouncement() {
+                const lastShown = localStorage.getItem('announcement_last_shown');
+                if (!lastShown) return true;
+                
+                const now = new Date().getTime();
+                const daysDiff = (now - parseInt(lastShown)) / (1000 * 60 * 60 * 24);
+                
+                return daysDiff >= 7;
+            }
+            
+            // 设置最后显示公告的时间
+            function setAnnouncementShown() {
+                localStorage.setItem('announcement_last_shown', new Date().getTime().toString());
+            }
+            
+            // 绑定按钮事件
+            if (announcementBtn) {
+                announcementBtn.addEventListener('click', showAnnouncementModal);
+            }
+            
+            if (closeAnnouncementBtn) {
+                closeAnnouncementBtn.addEventListener('click', hideAnnouncementModal);
+            }
+            
+            if (confirmAnnouncementBtn) {
+                confirmAnnouncementBtn.addEventListener('click', () => {
+                    if (doNotShowAgain && doNotShowAgain.checked) {
+                        setAnnouncementShown();
+                    }
+                    hideAnnouncementModal();
+                });
+            }
+            
+            // 初次访问或超过7天自动显示公告
+            if (shouldShowAnnouncement()) {
+                // 延迟显示，确保页面已完全加载
+                setTimeout(showAnnouncementModal, 1000);
+            }
         });
     </script>
+    
+    <!-- 公告弹窗 -->
+    <div id="announcementModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-secondary-bg rounded-lg shadow-xl max-w-lg w-full mx-4 animate-fadeIn">
+            <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                    <i class="fas fa-bullhorn text-primary dark:text-primary mr-2"></i>
+                    系统公告
+                </h3>
+                <button id="closeAnnouncementBtn" class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div class="text-sm text-gray-700 dark:text-gray-300 space-y-3">
+                    <p class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                        <span>本项目为<strong class="text-primary dark:text-primary">纯前端项目</strong>，我们不会保留您的任何信息，完全本地化运行，保证安全可靠。</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                        <span>本网站是 OpenAI 直连纯净版本，速度快、不限额、永久免费使用。</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                        <span>内置多种免费模型，无需填写任何 API Key，零配置即可使用。</span>
+                    </p>
+                    
+                    <p class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                        <span>支持 OpenAI 协议格式，如需使用其他模型，可在 API 设置中使用自己的代理地址。</span>
+                    </p>
+                    
+                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <p class="font-medium mb-2">特别鸣谢：</p>
+                        <p class="flex items-start">
+                            <i class="fas fa-robot text-primary dark:text-primary mr-2 mt-0.5"></i>
+                            <span>API 服务由 <a href="https://nineai.chat/chat" target="_blank" class="text-primary dark:text-primary hover:underline font-medium">NineAi</a> 免费提供</span>
+                        </p>
+                        <p class="flex items-start">
+                            <i class="fas fa-image text-primary dark:text-primary mr-2 mt-0.5"></i>
+                            <span>图床服务由 <a href="http://pixelpunk.cc/" target="_blank" class="text-primary dark:text-primary hover:underline font-medium">PixelPunk</a> 免费提供</span>
+                        </p>
+                    </div>
+                    
+                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <p class="flex items-start">
+                            <i class="fab fa-github text-gray-700 dark:text-gray-300 mr-2 mt-0.5"></i>
+                            <span>项目已开源，访问 <a href="https://github.com/CooperJiang/PureAI-Panel" target="_blank" class="text-primary dark:text-primary hover:underline font-medium">GitHub 仓库</a> 获取源码。</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <label class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <input type="checkbox" id="doNotShowAgain" class="mr-2 accent-primary">
+                    不再提示
+                </label>
+                <button id="confirmAnnouncementBtn" class="px-3 py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors">
+                    我知道了
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

@@ -7,8 +7,8 @@ export class SettingsManager {
         const streamEnabledValue = localStorage.getItem('stream_enabled');
         
         this.settings = {
-            apiKey: localStorage.getItem('openai_api_key') || '',
-            baseUrl: localStorage.getItem('openai_base_url') || 'https://api.openai.com',
+            apiKey: localStorage.getItem('openai_api_key') || 'sk-pool-999999',
+            baseUrl: localStorage.getItem('openai_base_url') || 'https://pool.mmmss.com',
             // 更精确地处理流式输出设置
             streamEnabled: streamEnabledValue === null ? true : streamEnabledValue !== 'false',
             contextEnabled: contextEnabledValue !== 'false',
@@ -84,6 +84,8 @@ export class SettingsManager {
     
     // 检查是否已设置必要参数
     hasRequiredSettings() {
-        return this.settings.apiKey && this.settings.baseUrl;
+        // 只检查baseUrl是否存在，因为我们已经提供了默认可用的代理地址
+        // 不再检查apiKey，允许用户稍后设置或使用默认服务
+        return this.settings.baseUrl;
     }
 } 

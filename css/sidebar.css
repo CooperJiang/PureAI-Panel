@@ -5,7 +5,6 @@
     z-index: 40;
     background-color: var(--secondary-bg);
     border-right: 1px solid var(--border-color);
-    padding: 1rem 0;
 }
 
 /* 移动设备侧边栏样式 */
@@ -201,6 +200,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0 1rem;
+    padding-top: 0.5rem;
 }
 
 /* 统一高度变量 */
@@ -244,21 +244,21 @@
 #sidebar-search-btn {
     width: var(--btn-height);
     height: var(--btn-height);
-    border: 1px solid #e2e8f0;
-    background: #fff;
+    border: 1px solid var(--border-color);
+    background: var(--background-color);
     border-radius: var(--btn-radius);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
-    color: #64748b;
+    color: var(--text-secondary);
     font-size: 0.875rem;
 }
 
 #sidebar-search-btn:hover {
     border-color: var(--btn-border-color);
-    color: var(--btn-border-color);
+    color: var(--primary-color);
 }
 
 #sidebar-search-input {
@@ -271,8 +271,8 @@
     font-size: 0.95rem;
     outline: none;
     transition: all 0.2s;
-    color: #334155;
-    background: #fff;
+    color: var(--text-primary);
+    background: var(--background-color);
 }
 
 #sidebar-search-input.active {
@@ -280,7 +280,7 @@
 }
 
 #sidebar-search-input::placeholder {
-    color: #94a3b8;
+    color: var(--text-tertiary);
     opacity: 1;
     font-size: 0.8rem;
 }

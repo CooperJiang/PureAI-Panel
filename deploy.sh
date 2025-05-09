@@ -26,12 +26,12 @@ fi
 
 # 显示帮助信息
 show_help() {
-    echo -e "${BLUE}前端项目部署脚本${NC}"
+    echo -e "${BLUE}PureAI Panel 部署脚本${NC}"
     echo
     echo -e "用法: $0 [选项] [命令]"
     echo
     echo "命令:"
-    echo "  deploy      部署前端项目到远程服务器"
+    echo "  deploy      部署项目到远程服务器"
     echo "  rollback    回滚到之前的版本"
     echo "  config      配置部署参数"
     echo "  help        显示帮助信息"
@@ -269,7 +269,7 @@ configure() {
     save_config
     
     echo -e "${GREEN}配置完成!${NC}"
-    echo -e "使用 '$0 deploy' 部署前端项目"
+    echo -e "使用 '$0 deploy' 部署项目"
 }
 
 # 检查SSH密钥是否已上传到服务器
@@ -341,7 +341,7 @@ fix_remote_ssh_config() {
     # 检查是否可以登录服务器
     echo -e "${BLUE}正在连接服务器检查SSH配置...${NC}"
     
-    # 创建要在远程执行的脚本
+    # 创建用于修复SSH配置的临时脚本
     cat > ./tmp_fix_ssh.sh << 'EOF'
 #!/bin/bash
 
@@ -441,6 +441,7 @@ EOF
         
         if eval "$TEST_CMD" 2>/dev/null | grep -q "SSH_KEY_TEST_AFTER_FIX"; then
             echo -e "${GREEN}SSH配置修复成功! 密钥认证现在可以工作了${NC}"
+            rm -f ./tmp_fix_ssh.sh
             return 0
         else
             echo -e "${YELLOW}修复尝试后密钥认证仍不工作${NC}"
@@ -454,6 +455,7 @@ EOF
                 # 再次测试
                 if eval "$TEST_CMD" 2>/dev/null | grep -q "SSH_KEY_TEST_AFTER_FIX"; then
                     echo -e "${GREEN}修复本地密钥权限成功! 密钥认证现在可以工作了${NC}"
+                    rm -f ./tmp_fix_ssh.sh
                     return 0
                 fi
             fi
@@ -463,6 +465,7 @@ EOF
             echo -e "1. 确保远程服务器允许密钥认证 (PubkeyAuthentication yes)"
             echo -e "2. 检查服务器上的 ~/.ssh 目录和 ~/.ssh/authorized_keys 文件权限"
             echo -e "3. 在目标服务器手动运行: sudo systemctl restart sshd"
+            rm -f ./tmp_fix_ssh.sh
             return 1
         fi
     else
@@ -470,8 +473,6 @@ EOF
         rm -f ./tmp_fix_ssh.sh
         return 1
     fi
-    
-    rm -f ./tmp_fix_ssh.sh
 }
 
 # 上传SSH密钥到服务器
