@@ -1051,6 +1051,21 @@ export class ChatUI {
                     // 保存最新内容到临时变量，用于最终更新
                     this._currentStreamContent = chunk;
                     
+                    // 实时保存当前已生成的内容 - 每次更新时都保存
+                    // 先检查是否已存在这条消息，如果不存在则添加，如果存在则更新
+                    const currentMessages = this.conversationManager.getCurrentConversation().messages;
+                    const lastMessage = currentMessages[currentMessages.length - 1];
+                    
+                    if (lastMessage && lastMessage.role === 'assistant') {
+                        // 如果最后一条消息是助手消息，则更新它
+                        lastMessage.content = chunk;
+                        this.conversationManager.saveConversations();
+                    } else {
+                        // 如果最后一条消息不是助手消息，则添加一条新的
+                        const assistantMsg = this.conversationManager.addMessage('assistant', chunk);
+                        // 不需要额外调用saveConversations，因为addMessage内部会保存
+                    }
+                    
                     // 尝试获取代码块，应用代码高亮和交互功能
                     this.codeBlockManager.updateCodeBlocks();
                     
@@ -1078,9 +1093,23 @@ export class ChatUI {
                         assistantElement.dataset.content = finalContent;
                     }
                     
-                    // 现在才将AI的回复添加到对话管理器中
-                    const assistantMsg = this.conversationManager.addMessage('assistant', finalContent);
-                    const assistantIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
+                    // 获取当前对话的消息
+                    const currentConversation = this.conversationManager.getCurrentConversation();
+                    const currentMessages = currentConversation.messages;
+                    
+                    // 检查最后一条消息是否是助手消息
+                    let assistantIndex = currentMessages.length - 1;
+                    if (assistantIndex >= 0 && currentMessages[assistantIndex].role === 'assistant') {
+                        // 更新最后一条助手消息的内容，而不是添加新消息
+                        currentMessages[assistantIndex].content = finalContent;
+                    } else {
+                        // 如果最后一条消息不是助手消息（极少数情况），则添加新消息
+                        const assistantMsg = this.conversationManager.addMessage('assistant', finalContent);
+                        assistantIndex = currentMessages.length - 1;
+                    }
+                    
+                    // 确保内容被保存到localStorage
+                    this.conversationManager.saveConversations();
                     
                     // 预估并显示token数量
                     this.updateTokenCount(assistantId, finalContent);
@@ -1109,7 +1138,7 @@ export class ChatUI {
                         // 启用输入
                         this.enableInput();
                         
-                        // 保存当前对话
+                        // 保存当前对话 - 再次确保保存
                         if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
                             this.conversationManager.saveCurrentConversation();
                         } else {
@@ -1141,6 +1170,9 @@ export class ChatUI {
                                     this.messageHandler.setupImagePreviews();
                                 }
                                 
+                                // 再次保存，确保所有处理完毕后的内容被保存
+                                this.conversationManager.saveConversations();
+                                
                                 // 强制滚动到AI回复的底部，无论用户是否手动滚动过
                                 setTimeout(() => {
                                     this.scrollToBottom(true);
@@ -1167,6 +1199,9 @@ export class ChatUI {
                         this.sendButton.style.display = 'flex';
                         this.sendingIndicator.style.display = 'none';
                         this.enableInput();
+                        
+                        // 再次确保内容被保存
+                        this.conversationManager.saveConversations();
                     }, 500);
                 } catch (e) {
                     // 确保状态正确重置
@@ -1302,20 +1337,31 @@ export class ChatUI {
             // 确保更新消息元素的内容属性
             assistantElement.dataset.content = currentContent;
             
-            // 将中断时的内容添加到对话中
-            const assistantMsg = this.conversationManager.addMessage('assistant', currentContent);
-            const assistantIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
+            // 获取当前对话的消息
+            const currentMessages = this.conversationManager.getCurrentConversation().messages;
+            
+            // 检查最后一条消息是否是助手消息
+            let assistantIndex = currentMessages.length - 1;
+            if (assistantIndex >= 0 && currentMessages[assistantIndex].role === 'assistant') {
+                // 更新最后一条助手消息的内容，而不是添加新消息
+                currentMessages[assistantIndex].content = currentContent;
+            } else {
+                // 如果最后一条消息不是助手消息（极少数情况），则添加新消息
+                const assistantMsg = this.conversationManager.addMessage('assistant', currentContent);
+                assistantIndex = currentMessages.length - 1;
+            }
             
             // 设置消息索引属性
             assistantElement.dataset.index = assistantIndex.toString();
             
-            // 保存当前对话
-            if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
-                this.conversationManager.saveCurrentConversation();
-            } else {
-                // 兼容旧版方式
+            // 保存当前对话 - 确保直接调用saveConversations
+            this.conversationManager.saveConversations();
+            
+            // 再次进行保存，以确保内容被保存
+            setTimeout(() => {
+                // 再次确保保存
                 this.conversationManager.saveConversations();
-            }
+            }, 100);
             
             // 更新token计数
             this.updateTokenCount(assistantId, currentContent);

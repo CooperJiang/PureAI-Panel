@@ -337,11 +337,6 @@ export class StreamManager {
             // 移除生成中的全局状态类
             document.body.classList.remove('isGenerating');
             
-            // 为安全确保清除所有光标
-            if (this.streamAnimationData.messageId) {
-                this.clearCursors(this.streamAnimationData.messageId);
-            }
-            
             // 保存最终的渲染进度，方便外部检查
             const finalProgress = this.getRenderingProgress();
             this.streamAnimationData = null;
@@ -416,9 +411,6 @@ export class StreamManager {
             }
         } catch (error) {
         }
-        
-        // 清除所有光标
-        this.clearCursors(messageId);
         
         // 添加渐进式渲染的过渡效果
         const currentContent = contentElement.innerHTML;
