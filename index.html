@@ -441,14 +441,38 @@
             // 显示公告弹窗
             function showAnnouncementModal() {
                 if (announcementModal) {
+                    // 显示模态框背景
                     announcementModal.classList.remove('hidden');
+                    // 延迟添加透明度，触发过渡动画
+                    setTimeout(() => {
+                        announcementModal.classList.add('opacity-100');
+                        // 显示内容并添加动画
+                        const content = document.getElementById('announcementContent');
+                        if (content) {
+                            content.classList.remove('scale-95', 'opacity-0');
+                            content.classList.add('scale-100', 'opacity-100');
+                        }
+                    }, 50);
                 }
             }
             
             // 隐藏公告弹窗
             function hideAnnouncementModal() {
                 if (announcementModal) {
-                    announcementModal.classList.add('hidden');
+                    // 先隐藏内容
+                    const content = document.getElementById('announcementContent');
+                    if (content) {
+                        content.classList.remove('scale-100', 'opacity-100');
+                        content.classList.add('scale-95', 'opacity-0');
+                    }
+                    
+                    // 延迟隐藏整个模态框
+                    announcementModal.classList.remove('opacity-100');
+                    
+                    // 等待动画完成后隐藏整个模态框
+                    setTimeout(() => {
+                        announcementModal.classList.add('hidden');
+                    }, 300);
                 }
             }
             
@@ -495,14 +519,14 @@
     </script>
     
     <!-- 公告弹窗 -->
-    <div id="announcementModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white dark:bg-secondary-bg rounded-lg shadow-xl max-w-lg w-full mx-4 animate-fadeIn">
+    <div id="announcementModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden transition-opacity duration-300 opacity-0">
+        <div id="announcementContent" class="bg-white dark:bg-secondary-bg rounded-lg shadow-xl max-w-lg w-full mx-4 transform transition-all duration-300 scale-95 opacity-0">
             <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
                     <i class="fas fa-bullhorn text-primary dark:text-primary mr-2"></i>
                     系统公告
                 </h3>
-                <button id="closeAnnouncementBtn" class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400">
+                <button id="closeAnnouncementBtn" class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
