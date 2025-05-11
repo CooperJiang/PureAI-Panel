@@ -387,6 +387,20 @@ export class SidebarManager {
             editButton.addEventListener('click', (e) => {
                 e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
                 
+                // 检查是否有全局的ChatUI实例并且正在生成
+                if (window.chatUI && window.chatUI.isGenerating) {
+                    if (window.toast) {
+                        window.toast.warning('请等待当前回复生成完成再修改设置');
+                    }
+                    return;
+                }
+                
+                // 先切换到被点击的对话
+                if (this.onSwitchConversation && typeof this.onSwitchConversation === 'function') {
+                    this.onSwitchConversation(conversation.id);
+                }
+                
+                // 然后打开设置模态框
                 if (this.onOpenSettings && typeof this.onOpenSettings === 'function') {
                     this.onOpenSettings();
                 }
