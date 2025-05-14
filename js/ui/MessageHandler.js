@@ -387,10 +387,31 @@ export class MessageHandler {
                 
                 // 找到消息元素和索引
                 const messageElement = button.closest('.chat');
-                if (!messageElement || !messageElement.dataset.index) return;
+                if (!messageElement || !messageElement.dataset.index) {
+                    console.warn('删除消息失败 - 消息元素不存在或没有索引属性', messageElement);
+                    // 尝试通过消息ID识别索引
+                    if (messageElement && messageElement.id) {
+                        // 在当前对话中搜索匹配ID的消息
+                        const conversation = this.conversationManager.getCurrentConversation();
+                        if (conversation && conversation.messages) {
+                            for (let i = 0; i < conversation.messages.length; i++) {
+                                // 如果ID中包含消息ID的一部分，认为是匹配的
+                                if (messageElement.id.includes(conversation.messages[i].id) || 
+                                    (conversation.messages[i].id && messageElement.id.includes(conversation.messages[i].id.split('-')[1]))) {
+                                    this.onDeleteMessage(i);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    return;
+                }
                 
                 const index = parseInt(messageElement.dataset.index);
-                if (isNaN(index)) return;
+                if (isNaN(index)) {
+                    console.warn('删除消息失败 - 索引不是有效数字:', messageElement.dataset.index);
+                    return;
+                }
                 this.onDeleteMessage(index);
             });
         });

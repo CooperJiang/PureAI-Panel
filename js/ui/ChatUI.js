@@ -476,15 +476,20 @@ export class ChatUI {
                     }
                     return;
                 }
-                
-                // 清除当前对话的所有消息
+              
+                // 清除当前对话的所有消息和断点
                 this.conversationManager.clearMessages();
-                    
+                
                 // 清空聊天区域
                 this.messageHandler.clearChatArea();
                 
                 // 更新对话列表
                 this.sidebarManager.renderConversationList();
+                
+                // 显示提示
+                if (window.toast) {
+                    window.toast.success('对话已清空，包括所有消息和断点');
+                }
                 
                 // 聚焦输入框
                 if (this.messageInput) {
@@ -847,8 +852,8 @@ export class ChatUI {
             return;
         }
         
-        // 创建新对话
-        this.conversationManager.createNewConversation();
+        // 创建新对话 - 这会自动初始化空的消息和断点数组
+        const newConversation = this.conversationManager.createNewConversation();
         
         // 清空聊天区域
         this.messageHandler.clearChatArea();
@@ -996,7 +1001,14 @@ export class ChatUI {
             this.chatMessages.appendChild(assistantElement);
             this._lastAssistantMessageId = assistantId;
             
-            // 助手消息暂时不设置索引属性，会在回复完成后设置
+            // 获取当前助手消息在消息数组中的索引，用于后续设置
+            const currentMessages = this.conversationManager.getCurrentConversation().messages;
+            const assistantIndex = currentMessages.length; // 用户消息已添加，助手消息将是下一个
+            
+            // 预先设置消息索引，解决删除最后一条消息的问题
+            if (assistantElement) {
+                assistantElement.dataset.index = assistantIndex.toString();
+            }
             
             // 强制再次滚动到底部，确保新添加的助手消息可见
             setTimeout(() => {
@@ -1114,95 +1126,75 @@ export class ChatUI {
                     // 预估并显示token数量
                     this.updateTokenCount(assistantId, finalContent);
                     
-                    // 结束消息后的回调
-                    const handleStreamingComplete = () => {
-                        // 重置生成状态
-                        this.isGenerating = false;
-                        this.streamManager.setGlobalGeneratingState(false);
-                        this.abortController = null;
-                        
-                        // 恢复UI状态
-                        this.sendButton.style.display = 'flex';
-                        this.sendingIndicator.style.display = 'none';
-                        
-                        // 添加消息索引，用于编辑和删除
-                        const assistantElement = document.getElementById(assistantId);
-                        if (assistantElement) {
-                            // 设置消息索引
-                            assistantElement.dataset.index = assistantIndex.toString();
-                        }
-                        
-                        // 更新UI状态 - 隐藏中断按钮，显示发送按钮
-                        this.showInterruptButton(false);
-                        
-                        // 启用输入
-                        this.enableInput();
-                        
-                        // 保存当前对话 - 再次确保保存
-                        if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
-                            this.conversationManager.saveCurrentConversation();
-                        } else {
-                            // 兼容旧版保存方式
-                            this.saveCurrentConversationIfNeeded();
-                        }
-                        
-                        // 最终处理代码块
-                        setTimeout(() => {
-                            try {
-                                // 应用代码高亮和交互功能
-                                this.codeBlockManager.updateCodeBlocks();
-                                this.ChatMessageComponent.applyCodeHighlightingToElement(assistantElement);
+                    // 设置消息索引，用于编辑和删除
+                    if (assistantElement) {
+                        // 设置消息索引
+                        assistantElement.dataset.index = assistantIndex.toString();
+                    }
+                    
+                    // 确保重新绑定消息事件
+                    if (this.messageHandler) {
+                        this.messageHandler.bindMessageEvents();
+                    }
+                    
+                    // 更新UI状态 - 隐藏中断按钮，显示发送按钮
+                    this.showInterruptButton(false);
+                    
+                    // 显式恢复发送按钮和隐藏加载指示器
+                    this.sendButton.style.display = 'flex';
+                    this.sendingIndicator.style.display = 'none';
+                    
+                    // 启用输入
+                    this.enableInput();
+                    
+                    // 保存当前对话 - 再次确保保存
+                    if (this.conversationManager && typeof this.conversationManager.saveCurrentConversation === 'function') {
+                        this.conversationManager.saveCurrentConversation();
+                    } else {
+                        // 兼容旧版保存方式
+                        this.saveCurrentConversationIfNeeded();
+                    }
+                    
+                    // 最终处理代码块
+                    setTimeout(() => {
+                        try {
+                            // 应用代码高亮和交互功能
+                            this.codeBlockManager.updateCodeBlocks();
+                            this.ChatMessageComponent.applyCodeHighlightingToElement(assistantElement);
+                            
+                            // 添加预览功能到HTML代码块
+                            this.formatter.addCodeInteractionButtons();
+                            
+                            // 重新初始化代码块UI和交互
+                            if (this.codeBlockManager) {
+                                this.codeBlockManager.reinitializeCodeBlocks();
+                                this.codeBlockManager.setupCodeBlockInteractions();
+                            }
+                            
+                            // 应用图片预览功能和重新绑定消息事件
+                            if (this.messageHandler && typeof this.messageHandler.bindMessageEvents === 'function') {
+                                this.messageHandler.bindMessageEvents();
+                            }
+                            if (this.messageHandler && typeof this.messageHandler.setupImagePreviews === 'function') {
+                                this.messageHandler.setupImagePreviews();
+                            }
+                            
+                            // 再次保存，确保所有处理完毕后的内容被保存
+                            this.conversationManager.saveConversations();
+                            
+                            // 强制滚动到AI回复的底部，无论用户是否手动滚动过
+                            setTimeout(() => {
+                                this.scrollToBottom(true);
                                 
-                                // 添加预览功能到HTML代码块
-                                this.formatter.addCodeInteractionButtons();
-                                
-                                // 重新初始化代码块UI和交互
-                                if (this.codeBlockManager) {
-                                    this.codeBlockManager.reinitializeCodeBlocks();
-                                    this.codeBlockManager.setupCodeBlockInteractions();
-                                }
-                                
-                                // 应用图片预览功能和重新绑定消息事件
-                                if (this.messageHandler && typeof this.messageHandler.bindMessageEvents === 'function') {
-                                    this.messageHandler.bindMessageEvents();
-                                }
-                                if (this.messageHandler && typeof this.messageHandler.setupImagePreviews === 'function') {
-                                    this.messageHandler.setupImagePreviews();
-                                }
-                                
-                                // 再次保存，确保所有处理完毕后的内容被保存
-                                this.conversationManager.saveConversations();
-                                
-                                // 强制滚动到AI回复的底部，无论用户是否手动滚动过
+                                // 额外延迟再次滚动，确保所有内容渲染完毕后滚动到底部
                                 setTimeout(() => {
                                     this.scrollToBottom(true);
-                                    
-                                    // 额外延迟再次滚动，确保所有内容渲染完毕后滚动到底部
-                                    setTimeout(() => {
-                                        this.scrollToBottom(true);
-                                    }, 200);
-                                }, 300);
-                            } catch (e) {
-                                console.error('流式响应完成后处理错误:', e);
-                            }
-                        }, 100);
-                    };
-                    
-                    // 设置流动完成回调
-                    this.streamManager.setAnimationCompleteCallback(handleStreamingComplete);
-                    
-                    // 直接执行一次回调，确保状态被重置
-                    setTimeout(() => {
-                        this.isGenerating = false;
-                        this.streamManager.setGlobalGeneratingState(false);
-                        this.showInterruptButton(false);
-                        this.sendButton.style.display = 'flex';
-                        this.sendingIndicator.style.display = 'none';
-                        this.enableInput();
-                        
-                        // 再次确保内容被保存
-                        this.conversationManager.saveConversations();
-                    }, 500);
+                                }, 200);
+                            }, 300);
+                        } catch (e) {
+                            console.error('流式响应完成后处理错误:', e);
+                        }
+                    }, 100);
                 } catch (e) {
                     // 确保状态正确重置
                     this.isGenerating = false;
@@ -1354,6 +1346,11 @@ export class ChatUI {
             // 设置消息索引属性
             assistantElement.dataset.index = assistantIndex.toString();
             
+            // 确保重新绑定消息事件，以便删除按钮生效
+            if (this.messageHandler && typeof this.messageHandler.bindMessageEvents === 'function') {
+                this.messageHandler.bindMessageEvents();
+            }
+            
             // 保存当前对话 - 确保直接调用saveConversations
             this.conversationManager.saveConversations();
             
@@ -1413,6 +1410,19 @@ export class ChatUI {
         
         // 将this.isGenerating与UI状态同步
         this.isGenerating = show;
+        
+        // 同时更新发送按钮和加载指示器状态
+        if (this.sendButton && this.sendingIndicator) {
+            if (show) {
+                // 生成中：隐藏发送按钮，显示加载指示器
+                this.sendButton.style.display = 'none';
+                this.sendingIndicator.style.display = 'flex';
+            } else {
+                // 生成结束：显示发送按钮，隐藏加载指示器
+                this.sendButton.style.display = 'flex';
+                this.sendingIndicator.style.display = 'none';
+            }
+        }
         
         // 更新全局生成状态
         document.body.classList.toggle('isGenerating', show);
@@ -1710,6 +1720,15 @@ export class ChatUI {
     bindBreakpointDeleteEvents() {
         if (!this.chatMessages) return;
         
+        
+        // 防止重复绑定事件
+        if (this.chatMessages._hasBindBreakpointEvents) {
+            return;
+        }
+        
+        // 标记已绑定
+        this.chatMessages._hasBindBreakpointEvents = true;
+        
         // 使用事件代理绑定到消息容器
         this.chatMessages.addEventListener('click', (e) => {
             const deleteBtn = e.target.closest('.delete-breakpoint-btn');
@@ -1718,22 +1737,22 @@ export class ChatUI {
                 const breakpointEl = deleteBtn.closest('.context-breakpoint');
                 if (breakpointEl && breakpointEl.dataset.breakpointIndex) {
                     const breakpointIndex = parseInt(breakpointEl.dataset.breakpointIndex);
-                    
-                    // 删除断点
-                    const success = this.conversationManager.removeBreakpoint(breakpointIndex);
-                    if (success) {
-                        // 从UI中移除断点标记元素
-                        breakpointEl.classList.add('animate__fadeOut');
-                        setTimeout(() => {
-                            breakpointEl.remove();
-                            // 显示成功通知
+                        const success = this.conversationManager.removeBreakpoint(breakpointIndex);
+                        if (success) {
+                            breakpointEl.classList.add('animate__fadeOut');
+                            setTimeout(() => {
+                                breakpointEl.remove();
+                                if (window.toast) {
+                                    window.toast.success('断点已删除，上下文已重新连接');
+                                }
+                            }, 500);
+                        } else {
                             if (window.toast) {
-                                window.toast.success('断点已删除，上下文已重新连接');
+                                window.toast.error('断点删除失败，请重试');
                             }
-                        }, 500);
+                        }
                     }
                 }
-            }
         });
     }
 } 

@@ -11,10 +11,13 @@ export class SettingsManager {
             baseUrl: localStorage.getItem('openai_base_url') || 'https://pool.mmmss.com',
             // 更精确地处理流式输出设置
             streamEnabled: streamEnabledValue === null ? true : streamEnabledValue !== 'false',
-            contextEnabled: contextEnabledValue !== 'false',
+            // 更精确地处理上下文设置，确保默认为true且正确解析布尔值
+            contextEnabled: contextEnabledValue === null ? true : 
+                           (contextEnabledValue === 'true' || contextEnabledValue === true),
             darkMode: localStorage.getItem('dark_mode') === 'true' || 
                      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
         };
+        
         
         // 初始化深色模式
         if (this.settings.darkMode) {
@@ -32,8 +35,19 @@ export class SettingsManager {
         
         // 特殊检查上下文开关
         if (key === 'contextEnabled') {
-            const storedValue = localStorage.getItem('context_enabled');
-            return this.settings[key];
+            // 确保返回布尔值，而不是字符串
+            const contextValue = this.settings[key];
+            
+            // 严格按布尔值返回
+            if (typeof contextValue === 'boolean') {
+                return contextValue;
+            } else if (contextValue === 'true') {
+                return true;
+            } else if (contextValue === 'false') {
+                return false;
+            }
+            // 如果值不合法，使用默认值
+            return defaultValue === undefined ? true : defaultValue;
         }
         
         // 特殊检查流式输出开关

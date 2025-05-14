@@ -30,16 +30,18 @@ export class ConversationManager {
         const lastMessageIndex = conversation.messages.length - 1;
         const lastMessage = conversation.messages[lastMessageIndex];
         
+        
         // 确保最后一条消息是助手消息，这样断点会在一组对话(用户+助手)之后
-        if (lastMessage.role !== 'assistant') {
+        if (lastMessage && lastMessage.role !== 'assistant') {
             // 如果最后一条不是助手消息，寻找最后一个助手消息的位置
             let lastAssistantIndex = -1;
             for (let i = lastMessageIndex; i >= 0; i--) {
-                if (conversation.messages[i].role === 'assistant') {
+                if (conversation.messages[i] && conversation.messages[i].role === 'assistant') {
                     lastAssistantIndex = i;
                     break;
                 }
             }
+            
             
             // 如果找到了助手消息，则在其后设置断点
             if (lastAssistantIndex >= 0) {
@@ -48,6 +50,7 @@ export class ConversationManager {
                 // 避免重复添加相同位置的断点
                 if (!conversation.breakpoints.includes(breakpointIndex)) {
                     conversation.breakpoints.push(breakpointIndex);
+                    
                     // 按照索引顺序排序
                     conversation.breakpoints.sort((a, b) => a - b);
                     
@@ -55,7 +58,7 @@ export class ConversationManager {
                     this.addBreakpointMessage(conversationId, breakpointIndex);
                     this.saveConversations();
                     return true;
-                }
+                } 
             }
             return false;
         } else {
@@ -65,6 +68,7 @@ export class ConversationManager {
             // 避免重复添加相同位置的断点
             if (!conversation.breakpoints.includes(breakpointIndex)) {
                 conversation.breakpoints.push(breakpointIndex);
+                
                 // 按照索引顺序排序
                 conversation.breakpoints.sort((a, b) => a - b);
                 
@@ -72,7 +76,7 @@ export class ConversationManager {
                 this.addBreakpointMessage(conversationId, breakpointIndex);
                 this.saveConversations();
                 return true;
-            }
+            } 
         }
         
         return false;
@@ -131,31 +135,73 @@ export class ConversationManager {
             
         if (!conversation) return [];
         
+        
         // 如果没有断点或断点数组为空，返回所有消息
         if (!Array.isArray(conversation.breakpoints) || conversation.breakpoints.length === 0) {
-            return this._ensureValidMessageSequence(conversation.messages.filter(msg => msg.type !== 'breakpoint'));
+            return this._ensureValidMessageSequence(
+                conversation.messages.filter(msg => msg && msg.type !== 'breakpoint')
+            );
         }
         
-        // 获取最近的断点
-        const latestBreakpoint = Math.max(...conversation.breakpoints);
-        let messages = conversation.messages.slice(latestBreakpoint).filter(msg => msg.type !== 'breakpoint');
+        // 获取最近的断点索引值 - 这是消息数组中的位置
+        const breakpoints = conversation.breakpoints || [];
+        if (breakpoints.length === 0) {
+            return this._ensureValidMessageSequence(
+                conversation.messages.filter(msg => msg && msg.type !== 'breakpoint')
+            );
+        }
+        
+        // 获取最大断点值 - 这是消息的索引位置
+        const latestBreakpoint = Math.max(...breakpoints);
+        
+        // 检查断点值是否有效 - 如果大于等于消息数量，那么没有断点后的消息
+        if (latestBreakpoint >= conversation.messages.length) {
+            // 找最后一条用户消息作为上下文
+            const lastUserMessage = this._findLastUserMessage(conversation.messages);
+            return lastUserMessage ? [lastUserMessage] : [];
+        }
+        
+        // 从断点位置开始获取消息 - 断点位置表示该位置的消息不包括在上下文中
+        // 所以我们从断点位置开始获取后续所有消息
+        let messages = [];
+        if (Array.isArray(conversation.messages) && latestBreakpoint < conversation.messages.length) {
+            // 从断点位置开始获取所有消息
+            messages = conversation.messages.slice(latestBreakpoint).filter(msg => 
+                msg && msg.type !== 'breakpoint'
+            );
+        }
         
         // 确保消息序列有效（首条必须是用户消息）
         let validMessages = this._ensureValidMessageSequence(messages);
         
-        // 修复：如果断点后没有有效的消息，找到最后一条用户消息
-        if (validMessages.length === 0) {
-            // 从所有消息中找出最后一条用户消息
-            for (let i = conversation.messages.length - 1; i >= 0; i--) {
-                const msg = conversation.messages[i];
-                if (msg.role === 'user' && msg.content && !msg.type) {
-                    validMessages = [msg];
-                    break;
-                }
-            }
+        // 如果断点后没有有效的消息，找到最后一条用户消息
+        if (!validMessages || validMessages.length === 0) {
+            const lastUserMessage = this._findLastUserMessage(conversation.messages);
+            return lastUserMessage ? [lastUserMessage] : [];
         }
         
         return validMessages;
+    }
+    
+    /**
+     * 查找消息数组中的最后一条用户消息
+     * @private
+     * @param {Array} messages - 消息数组
+     * @returns {Object|null} - 找到的用户消息或null
+     */
+    _findLastUserMessage(messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return null;
+        }
+        
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg && msg.role === 'user' && msg.content && !msg.type) {
+                return msg;
+            }
+        }
+        
+        return null;
     }
     
     /**
@@ -165,11 +211,20 @@ export class ConversationManager {
      * @returns {Array} - 处理后的有效消息数组
      */
     _ensureValidMessageSequence(messages) {
-        if (messages.length === 0) return [];
+        // 确保messages是数组且不为空
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return [];
+        }
+        
+        // 确保第一条消息存在并且有role属性
+        if (!messages[0] || !messages[0].role) {
+            return [];
+        }
         
         // 如果第一条不是用户消息，找到第一条用户消息
         if (messages[0].role !== 'user') {
-            const firstUserMsgIndex = messages.findIndex(msg => msg.role === 'user');
+            // 确保只查找有效的消息
+            const firstUserMsgIndex = messages.findIndex(msg => msg && msg.role === 'user');
             
             // 如果找到了用户消息，从那里开始切片
             if (firstUserMsgIndex > 0) {
@@ -419,7 +474,9 @@ export class ConversationManager {
     // 清空当前对话的消息
     clearMessages() {
         const conversation = this.getCurrentConversation();
+        // 同时清空消息和断点信息
         conversation.messages = [];
+        conversation.breakpoints = []; // 确保断点信息也被清除
         conversation.updatedAt = new Date().toISOString();
         this.saveConversations();
     }
@@ -631,6 +688,7 @@ export class ConversationManager {
             return false;
         }
         
+        
         // 直接在断点数组中查找该值
         const indexInArray = conversation.breakpoints.indexOf(index);
         if (indexInArray !== -1) {
@@ -640,7 +698,7 @@ export class ConversationManager {
             // 查找并删除断点标记消息
             for (let i = 0; i < conversation.messages.length; i++) {
                 const msg = conversation.messages[i];
-                if (msg.type === 'breakpoint' && i === index) {
+                if (msg && msg.type === 'breakpoint' && i === index) {
                     // 移除断点消息
                     conversation.messages.splice(i, 1);
                     
@@ -659,15 +717,17 @@ export class ConversationManager {
             return true;
         }
         
+        
         // 尝试作为消息索引查找
         for (let i = 0; i < conversation.messages.length; i++) {
             const msg = conversation.messages[i];
-            if (msg.type === 'breakpoint' && msg.id && msg.id.includes(index)) {
+            if (msg && msg.type === 'breakpoint' && msg.id && msg.id.includes(index)) {
                 // 查找该位置是否在断点数组中
                 const bpIndex = conversation.breakpoints.indexOf(i);
                 if (bpIndex !== -1) {
                     // 从断点数组中删除
                     conversation.breakpoints.splice(bpIndex, 1);
+                    
                     // 从消息数组中删除
                     conversation.messages.splice(i, 1);
                     

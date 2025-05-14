@@ -68,33 +68,55 @@ export class ApiClient {
             });
         }
         
-        // 根据上下文设置决定是否添加历史消息
-        const shouldUseContext = contextEnabled !== false; // 将字符串'false'也处理为布尔false
+        // 根据上下文设置决定是否添加历史消息 - 更准确地判断布尔值
+        const shouldUseContext = contextEnabled === true || contextEnabled === 'true';
         
         if (shouldUseContext) {
             // 上下文开启：添加断点之后的历史对话，过滤掉空内容
             if (this.conversationManager) {
                 const messagesAfterBreakpoint = this.conversationManager.getMessagesAfterBreakpoint();
-                const formattedMessages = messagesAfterBreakpoint.map(msg => ({
-                    role: msg.role,
-                    content: msg.content
-                })).filter(msg => 
-                    msg.content !== '' && 
-                    ['user', 'assistant', 'system'].includes(msg.role) && 
-                    !msg.isBreakpoint && 
-                    !msg.type
-                );
                 
-                finalMessages = [...finalMessages, ...formattedMessages];
+                // 确保messagesAfterBreakpoint是有效数组
+                if (Array.isArray(messagesAfterBreakpoint) && messagesAfterBreakpoint.length > 0) {
+                    const formattedMessages = messagesAfterBreakpoint
+                        .filter(msg => msg && msg.content && msg.role) // 确保消息格式有效
+                        .map(msg => ({
+                            role: msg.role,
+                            content: msg.content
+                        }))
+                        .filter(msg => 
+                            msg.content !== '' && 
+                            ['user', 'assistant', 'system'].includes(msg.role) && 
+                            !msg.isBreakpoint && 
+                            !msg.type
+                        );
+                    
+                    
+                    if (formattedMessages.length > 0) {
+                        finalMessages = [...finalMessages, ...formattedMessages];
+                    } else {
+                        // 回退到仅使用当前消息
+                        const lastUserMessage = messages.find(msg => msg.role === 'user');
+                        if (lastUserMessage) {
+                            finalMessages.push(lastUserMessage);
+                        }
+                    }
+                } else {
+                    // 回退到仅使用当前消息
+                    const lastUserMessage = messages.find(msg => msg.role === 'user');
+                    if (lastUserMessage) {
+                        finalMessages.push(lastUserMessage);
+                    }
+                }
             } else {
                 // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
-                finalMessages = [...finalMessages, ...messages.filter(msg => 
+                const filteredMessages = messages.filter(msg => 
                     msg.content !== '' && 
                     ['user', 'assistant', 'system'].includes(msg.role)
-                )];
+                );
+                finalMessages = [...finalMessages, ...filteredMessages];
             }
         } else {
-            // 上下文关闭：只添加最后一条用户消息
             for (let i = messages.length - 1; i >= 0; i--) {
                 if (messages[i].role === 'user' && messages[i].content !== '') {
                     finalMessages.push(messages[i]);
@@ -168,6 +190,26 @@ export class ApiClient {
                         finalMessages = [...systemMessages, ...finalMessages.slice(firstUserIndex)];
                     }
                 }
+            }
+        }
+        
+        // 修复：检查最终消息数组是否为空，如果为空则添加最后一条用户消息
+        if (finalMessages.length === 0 && messages.length > 0) {
+            // 查找最后一条用户消息
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === 'user' && messages[i].content !== '') {
+                    finalMessages.push(messages[i]);
+                    break;
+                }
+            }
+            
+            // 如果仍然没有找到任何用户消息，创建一个临时的用户消息
+            if (finalMessages.length === 0) {
+                const tempUserMsg = {
+                    role: 'user',
+                    content: '请帮助我。'
+                };
+                finalMessages.push(tempUserMsg);
             }
         }
         
@@ -261,39 +303,62 @@ export class ApiClient {
                 });
             }
             
-            // 根据上下文设置决定是否添加历史消息
-            const shouldUseContext = contextEnabled !== false; // 将字符串'false'也处理为布尔false
+            // 根据上下文设置决定是否添加历史消息 - 更准确地判断布尔值
+            const shouldUseContext = contextEnabled === true || contextEnabled === 'true';
             
             if (shouldUseContext) {
                 // 上下文开启：添加断点之后的历史对话，过滤掉空内容
                 if (this.conversationManager) {
                     const messagesAfterBreakpoint = this.conversationManager.getMessagesAfterBreakpoint();
-                    const formattedMessages = messagesAfterBreakpoint.map(msg => ({
-                        role: msg.role,
-                        content: msg.content
-                    })).filter(msg => 
-                        msg.content !== '' && 
-                        ['user', 'assistant', 'system'].includes(msg.role) && 
-                        !msg.isBreakpoint && 
-                        !msg.type
-                    );
                     
-                    finalMessages = [...finalMessages, ...formattedMessages];
+                    // 确保messagesAfterBreakpoint是有效数组
+                    if (Array.isArray(messagesAfterBreakpoint) && messagesAfterBreakpoint.length > 0) {
+                        const formattedMessages = messagesAfterBreakpoint
+                            .filter(msg => msg && msg.content && msg.role) // 确保消息格式有效
+                            .map(msg => ({
+                                role: msg.role,
+                                content: msg.content
+                            }))
+                            .filter(msg => 
+                                msg.content !== '' && 
+                                ['user', 'assistant', 'system'].includes(msg.role) && 
+                                !msg.isBreakpoint && 
+                                !msg.type
+                            );
+                        
+                        
+                        if (formattedMessages.length > 0) {
+                            finalMessages = [...finalMessages, ...formattedMessages];
+                        } else {
+                            // 回退到仅使用当前消息
+                            const lastUserMessage = messages.find(msg => msg.role === 'user');
+                            if (lastUserMessage) {
+                                finalMessages.push(lastUserMessage);
+                            }
+                        }
+                    } else {
+                        // 回退到仅使用当前消息
+                        const lastUserMessage = messages.find(msg => msg.role === 'user');
+                        if (lastUserMessage) {
+                            finalMessages.push(lastUserMessage);
+                        }
+                    }
                 } else {
                     // 兼容性处理：如果没有conversationManager或断点功能，则使用所有消息
-                    finalMessages = [...finalMessages, ...messages.filter(msg => 
+                    const filteredMessages = messages.filter(msg => 
                         msg.content !== '' && 
                         ['user', 'assistant', 'system'].includes(msg.role)
-                    )];
+                    );
+                    finalMessages = [...finalMessages, ...filteredMessages];
                 }
             } else {
-                // 上下文关闭：只添加最后一条用户消息
                 for (let i = messages.length - 1; i >= 0; i--) {
                     if (messages[i].role === 'user' && messages[i].content !== '') {
                         finalMessages.push(messages[i]);
                         break;
                     }
                 }
+                
                 // 当关闭上下文时，记录当前位置为新的断点
                 if (this.conversationManager) {
                     // 设置断点并获取是否成功
@@ -375,10 +440,11 @@ export class ApiClient {
                 
                 // 如果仍然没有找到任何用户消息，创建一个临时的用户消息
                 if (finalMessages.length === 0) {
-                    finalMessages.push({
+                    const tempUserMsg = {
                         role: 'user',
                         content: '请帮助我。'
-                    });
+                    };
+                    finalMessages.push(tempUserMsg);
                 }
             }
             

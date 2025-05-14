@@ -107,7 +107,7 @@
                 </div>
                 <div class="ml-2">
                     <div class="text-sm font-medium text-txt-primary dark:text-txt-primary">PureAI Panel</div>
-                    <div class="text-xs text-txt-secondary dark:text-txt-secondary">v1.0.0</div>
+                    <div class="text-xs text-txt-secondary dark:text-txt-secondary">v1.0.2</div>
                 </div>
             </div>
         </div>
@@ -294,17 +294,24 @@
                 
                 // 切换事件
                 contextToggleBtn.addEventListener('click', () => {
-                    const newState = settingsManager.toggle('contextEnabled');
+                    const currentState = settingsManager.get('contextEnabled');
+                    
+                    // 切换状态 - 明确指定布尔值
+                    const newState = !currentState;
+                    settingsManager.set('contextEnabled', newState);
+                    
+                    // 更新UI
                     contextStatusText.textContent = newState ? '上下文开启中' : '上下文关闭中';
                     
                     // 当切换上下文状态时，在当前位置设置断点
                     if (conversationManager) {
-                        // 尝试设置断点并获取结果
-                        const breakpointSet = conversationManager.setContextBreakpoint();
-                        
                         if (newState) {
+                            // 开启上下文模式时只显示提示，不设置断点
                             window.toast.info('已开启上下文模式，从当前位置开始记录上下文');
                         } else {
+                            // 关闭上下文模式时设置断点
+                            const breakpointSet = conversationManager.setContextBreakpoint();
+                            
                             if (breakpointSet) {
                                 window.toast.info('已关闭上下文模式，并在当前位置设置断点');
                                 
