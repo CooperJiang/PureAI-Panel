@@ -290,6 +290,13 @@ export class ConversationManager {
             const savedConversations = localStorage.getItem('conversations');
             if (savedConversations) {
                 this.conversations = JSON.parse(savedConversations);
+                
+                // 为旧数据添加scrollPosition字段
+                this.conversations.forEach(conversation => {
+                    if (typeof conversation.scrollPosition === 'undefined') {
+                        conversation.scrollPosition = 0;
+                    }
+                });
             }
             
             // 如果没有对话，创建一个新的
@@ -332,6 +339,7 @@ export class ConversationManager {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isPinned: false, // 添加置顶标记
+            scrollPosition: 0, // 添加滚动位置记录
             // 添加每个对话的独立配置
             config: {
                 model: localStorage.getItem('selected_model') || 'gpt-4o-mini',
@@ -745,5 +753,38 @@ export class ConversationManager {
         }
         
         return false;
+    }
+    
+    /**
+     * 保存当前对话的滚动位置
+     * @param {number} scrollPosition - 滚动位置
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     */
+    saveScrollPosition(scrollPosition, conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (conversation && typeof scrollPosition === 'number') {
+            conversation.scrollPosition = scrollPosition;
+            this.saveConversations();
+        }
+    }
+    
+    /**
+     * 获取对话的滚动位置
+     * @param {string} conversationId - 对话ID，不提供则使用当前对话
+     * @returns {number} - 滚动位置，默认为0
+     */
+    getScrollPosition(conversationId = null) {
+        const conversation = conversationId ? 
+            this.getConversationById(conversationId) : 
+            this.getCurrentConversation();
+            
+        if (conversation && typeof conversation.scrollPosition === 'number') {
+            return conversation.scrollPosition;
+        }
+        
+        return 0; // 默认滚动位置为0（顶部）
     }
 } 

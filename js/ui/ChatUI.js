@@ -31,6 +31,10 @@ export class ChatUI {
         // 最近使用的助手消息ID跟踪器
         this._lastAssistantMessageId = null;
         
+        // 滚动位置记忆相关变量
+        this.scrollPositionSaveTimer = null;
+        this.isRestoringScroll = false;
+        
         // 缓存DOM元素
         this.cacheElements();
         
@@ -670,6 +674,13 @@ export class ChatUI {
             return;
         }
         
+        // 获取保存的滚动位置
+        const savedScrollPosition = this.conversationManager.getScrollPosition();
+        
+        // 暂时隐藏聊天容器，避免渲染过程中的视觉闪烁
+        const originalOpacity = this.chatMessages.style.opacity;
+        this.chatMessages.style.opacity = '0';
+        
         // 清空聊天区域
         this.messageHandler.clearChatArea();
         
@@ -678,6 +689,9 @@ export class ChatUI {
         
         // 加载对话中的所有消息
         if (currentConversation.messages && currentConversation.messages.length > 0) {
+            // 标记正在恢复，防止在渲染过程中触发滚动事件
+            this.isRestoringScroll = true;
+            
             currentConversation.messages.forEach((message, index) => {
                 // 检查是否是断点标记消息
                 if (message.type === 'breakpoint') {
@@ -769,8 +783,17 @@ export class ChatUI {
                 this.codeBlockManager.reinitializeCodeBlocks();
             }
             
-            // 滚动到底部
+            // 立即恢复滚动位置，避免闪烁
+            this.restoreScrollPositionImmediate(savedScrollPosition);
+            
+            // 恢复聊天容器的可见性
+            this.chatMessages.style.opacity = originalOpacity || '1';
+        } else {
+            // 没有消息时滚动到底部
             this.scrollToBottom();
+            
+            // 恢复聊天容器的可见性
+            this.chatMessages.style.opacity = originalOpacity || '1';
         }
         
         // 设置页面标题
@@ -824,6 +847,11 @@ export class ChatUI {
             return;
         }
         
+        // 保存当前对话的滚动位置
+        if (this.chatMessages && this.conversationManager) {
+            this.conversationManager.saveScrollPosition(this.chatMessages.scrollTop);
+        }
+        
         // 保存当前对话
         this.saveCurrentConversationIfNeeded();
         
@@ -850,6 +878,11 @@ export class ChatUI {
                 window.toast.warning('请等待当前回复生成完成再创建新对话');
             }
             return;
+        }
+        
+        // 保存当前对话的滚动位置
+        if (this.chatMessages && this.conversationManager) {
+            this.conversationManager.saveScrollPosition(this.chatMessages.scrollTop);
         }
         
         // 创建新对话 - 这会自动初始化空的消息和断点数组
@@ -1453,6 +1486,9 @@ export class ChatUI {
         
         // 监听滚动事件
         this.chatMessages.addEventListener('scroll', () => {
+            // 如果正在恢复滚动位置，跳过保存和检测
+            if (this.isRestoringScroll) return;
+            
             // 当前滚动位置
             const currentScrollTop = this.chatMessages.scrollTop;
             
@@ -1474,6 +1510,18 @@ export class ChatUI {
                 }
             }
             
+            // 防抖保存滚动位置
+            if (this.scrollPositionSaveTimer) {
+                clearTimeout(this.scrollPositionSaveTimer);
+            }
+            
+            this.scrollPositionSaveTimer = setTimeout(() => {
+                // 保存当前滚动位置到对话数据
+                if (this.conversationManager && !this.isRestoringScroll) {
+                    this.conversationManager.saveScrollPosition(currentScrollTop);
+                }
+            }, 300);
+            
             // 更新上次滚动位置
             this.lastScrollTop = currentScrollTop;
         });
@@ -1491,6 +1539,79 @@ export class ChatUI {
             }
         });
         
+    }
+    
+    /**
+     * 恢复对话的滚动位置
+     */
+    restoreScrollPosition() {
+        if (!this.chatMessages || !this.conversationManager) return;
+        
+        // 标记正在恢复滚动位置，避免触发保存事件
+        this.isRestoringScroll = true;
+        
+        try {
+            const savedPosition = this.conversationManager.getScrollPosition();
+            
+            if (savedPosition > 0) {
+                // 确保滚动位置在有效范围内
+                const maxScrollTop = this.chatMessages.scrollHeight - this.chatMessages.clientHeight;
+                const targetPosition = Math.min(savedPosition, Math.max(0, maxScrollTop));
+                
+                // 设置滚动位置
+                this.chatMessages.scrollTop = targetPosition;
+                
+                // 如果不在底部，标记用户已滚动
+                if (maxScrollTop - targetPosition > 30) {
+                    this.userHasScrolled = true;
+                } else {
+                    this.userHasScrolled = false;
+                }
+            } else {
+                // 没有保存的位置，滚动到底部
+                this.scrollToBottom(true);
+            }
+        } finally {
+            // 延迟重置标记，确保滚动完成
+            setTimeout(() => {
+                this.isRestoringScroll = false;
+            }, 200);
+        }
+    }
+    
+    /**
+     * 立即恢复对话的滚动位置（避免闪烁）
+     * @param {number} savedPosition - 保存的滚动位置
+     */
+    restoreScrollPositionImmediate(savedPosition) {
+        if (!this.chatMessages) return;
+        
+        try {
+            if (savedPosition > 0) {
+                // 确保滚动位置在有效范围内
+                const maxScrollTop = this.chatMessages.scrollHeight - this.chatMessages.clientHeight;
+                const targetPosition = Math.min(savedPosition, Math.max(0, maxScrollTop));
+                
+                // 立即设置滚动位置，不使用平滑滚动
+                this.chatMessages.scrollTop = targetPosition;
+                
+                // 如果不在底部，标记用户已滚动
+                if (maxScrollTop - targetPosition > 30) {
+                    this.userHasScrolled = true;
+                } else {
+                    this.userHasScrolled = false;
+                }
+            } else {
+                // 没有保存的位置，滚动到底部
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                this.userHasScrolled = false;
+            }
+        } finally {
+            // 短暂延迟后重置标记，确保渲染完成
+            setTimeout(() => {
+                this.isRestoringScroll = false;
+            }, 50);
+        }
     }
     
     /**
