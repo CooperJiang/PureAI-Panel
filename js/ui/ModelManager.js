@@ -23,7 +23,8 @@ export class ModelManager {
         
         // 内置模型列表
         this.builtInModels = [
-            { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+            { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
+            { id: 'gpt-5-nano', name: 'GPT-5 Nano' },
             { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
             { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano' },
             { id: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini (2025-04-14)' },

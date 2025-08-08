@@ -27,6 +27,8 @@ export class ChatUI {
         // 状态标志
         this.isGenerating = false;
         this.abortController = null;
+        // 待发送图片（dataURL 列表）
+        this.pendingImages = [];
         
         // 最近使用的助手消息ID跟踪器
         this._lastAssistantMessageId = null;
@@ -57,6 +59,8 @@ export class ChatUI {
         
         // 绑定事件
         this.bindEvents();
+        // 初始化图片上传事件
+        this.initImageUploadToolbar();
         
         // 绑定快捷键
         this.bindShortcuts();
@@ -74,6 +78,9 @@ export class ChatUI {
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.sendingIndicator = document.getElementById('sendingIndicator');
+        this.imageUploadBtn = document.getElementById('imageUploadBtn');
+        this.imageFileInput = document.getElementById('imageFileInput');
+        this.imagePreviewContainer = document.getElementById('imagePreviewContainer');
         
         // 中断按钮相关 - 使用中断按钮代替停止按钮
         this.interruptButton = document.getElementById('interruptButton');
@@ -96,6 +103,221 @@ export class ChatUI {
         this.apiSettingsBtn = document.getElementById('apiSettingsBtn');
     }
     
+    /**
+     * 初始化图片上传工具栏
+     */
+    initImageUploadToolbar() {
+        // 绑定上传按钮点击，触发文件选择
+        if (this.imageUploadBtn && this.imageFileInput) {
+            this.imageUploadBtn.addEventListener('click', () => {
+                if (this.isGenerating) return;
+                this.imageFileInput.click();
+            });
+        }
+        // 绑定文件选择变化
+        if (this.imageFileInput) {
+            this.imageFileInput.addEventListener('change', async (e) => {
+                const files = Array.from(/** @type {HTMLInputElement} */(e.target).files || []);
+                if (!files.length) return;
+                // 将文件转为 dataURL 存入 pendingImages
+                for (const file of files) {
+                    try {
+                        const compressed = await this.compressImageFile(file);
+                        if (compressed && typeof compressed.dataUrl === 'string') {
+                            this.pendingImages.push({ name: file.name, type: compressed.type, dataUrl: compressed.dataUrl });
+                        }
+                    } catch (err) {
+                        if (window.toast) window.toast.error('图片读取失败');
+                    }
+                }
+                // 清空选择（允许重复选择同样的文件）
+                this.imageFileInput.value = '';
+                // 刷新预览
+                this.renderImagePreviews();
+            });
+        }
+        
+        // 拖拽上传支持
+        const dropZone = document.querySelector('.input-container') || this.messageInput || document.body;
+        if (dropZone) {
+            const prevent = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, prevent, false);
+            });
+            dropZone.addEventListener('dragover', () => {
+                if (dropZone instanceof HTMLElement) dropZone.classList.add('ring-1', 'ring-primary');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                if (dropZone instanceof HTMLElement) dropZone.classList.remove('ring-1', 'ring-primary');
+            });
+            dropZone.addEventListener('drop', async (ev) => {
+                if (!(ev instanceof DragEvent)) return;
+                const dt = ev.dataTransfer;
+                if (!dt) return;
+                const files = Array.from(dt.files || []).filter(f => f.type.startsWith('image/'));
+                if (files.length === 0) return;
+                for (const file of files) {
+                    try {
+                        const compressed = await this.compressImageFile(file);
+                        if (compressed && typeof compressed.dataUrl === 'string') {
+                            this.pendingImages.push({ name: file.name, type: compressed.type, dataUrl: compressed.dataUrl });
+                        }
+                    } catch {}
+                }
+                this.renderImagePreviews();
+                if (dropZone instanceof HTMLElement) dropZone.classList.remove('ring-1', 'ring-primary');
+            });
+        }
+    }
+
+    /**
+     * File -> DataURL 工具
+     */
+    readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /**
+     * 压缩图片文件并返回 dataURL
+     * 目标：限制长边、质量与最大字节数，尽量降低token占用
+     */
+    async compressImageFile(file) {
+        const options = this.imageCompressOptions || {
+            maxDimension: 1280,
+            maxBytes: 300 * 1024, // 约300KB
+            outputType: 'image/webp',
+            qualityStart: 0.75,
+            qualityMin: 0.4,
+            downscaleStep: 0.85
+        };
+        // 读取为位图
+        let bitmap;
+        try {
+            // createImageBitmap 更高效
+            bitmap = await createImageBitmap(file);
+        } catch {
+            const dataUrl = await this.readFileAsDataURL(file);
+            bitmap = await this.loadImageFromDataURL(dataUrl);
+        }
+        if (!bitmap) return { dataUrl: await this.readFileAsDataURL(file), type: file.type || 'image/png' };
+        // 初始尺寸按长边约束
+        const { width, height } = bitmap;
+        const maxDim = options.maxDimension;
+        const scale0 = Math.min(1, maxDim / Math.max(width, height));
+        let targetW = Math.max(1, Math.round(width * scale0));
+        let targetH = Math.max(1, Math.round(height * scale0));
+        // 准备画布
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return { dataUrl: await this.readFileAsDataURL(file), type: file.type || 'image/png' };
+        let quality = options.qualityStart;
+        let type = options.outputType || 'image/webp';
+        // 迭代压缩直到小于阈值或质量降到下限
+        for (let i = 0; i < 8; i++) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+            ctx.clearRect(0, 0, targetW, targetH);
+            ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+            let dataUrl;
+            try {
+                dataUrl = canvas.toDataURL(type, quality);
+            } catch {
+                // 某些类型不支持，回退到jpeg
+                type = 'image/jpeg';
+                dataUrl = canvas.toDataURL(type, quality);
+            }
+            const bytes = this.dataURLSizeBytes(dataUrl);
+            if (bytes <= options.maxBytes) {
+                return { dataUrl, type };
+            }
+            // 优先降低质量
+            if (quality > options.qualityMin + 0.05) {
+                quality = Math.max(options.qualityMin, quality - 0.15);
+                continue;
+            }
+            // 再缩小尺寸
+            targetW = Math.max(1, Math.round(targetW * options.downscaleStep));
+            targetH = Math.max(1, Math.round(targetH * options.downscaleStep));
+        }
+        // 兜底返回最后一次结果
+        const fallbackDataUrl = canvas.toDataURL(type, quality);
+        return { dataUrl: fallbackDataUrl, type };
+    }
+
+    /**
+     * 从 dataURL 创建 Image/Bitmap 的回退加载
+     */
+    loadImageFromDataURL(dataUrl) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = dataUrl;
+        });
+    }
+
+    /**
+     * 计算 dataURL 近似字节数
+     */
+    dataURLSizeBytes(dataUrl) {
+        try {
+            const base64 = (dataUrl.split(',')[1] || '').trim();
+            // base64 大小估算：长度 * 0.75
+            return Math.floor(base64.length * 0.75);
+        } catch {
+            return dataUrl.length;
+        }
+    }
+
+    /**
+     * 渲染选中图片的预览缩略图
+     */
+    renderImagePreviews() {
+        if (!this.imagePreviewContainer) return;
+        // 清空
+        this.imagePreviewContainer.innerHTML = '';
+        if (!this.pendingImages || this.pendingImages.length === 0) return;
+        // 逐个渲染
+        this.pendingImages.forEach((img, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative w-12 h-12 rounded overflow-hidden border border-border-color dark:border-border-color';
+            wrapper.innerHTML = `
+                <img src="${img.dataUrl}" alt="${img.name}" class="w-full h-full object-cover" />
+                <button data-index="${idx}" class="absolute -top-2 -right-2 bg-black/60 text-white w-5 h-5 rounded-full flex items-center justify-center hover:bg-black/80" title="移除">
+                    <i class="fas fa-times text-[10px]"></i>
+                </button>
+            `;
+            const btn = wrapper.querySelector('button');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const index = Number(btn.getAttribute('data-index'));
+                    if (!Number.isNaN(index)) {
+                        this.pendingImages.splice(index, 1);
+                        this.renderImagePreviews();
+                    }
+                });
+            }
+            this.imagePreviewContainer.appendChild(wrapper);
+        });
+    }
+
+    /**
+     * 发送后清理已选图片
+     */
+    clearPendingImages() {
+        this.pendingImages = [];
+        // 直接清空DOM，确保无残留
+        if (this.imagePreviewContainer) {
+            this.imagePreviewContainer.innerHTML = '';
+        }
+        this.renderImagePreviews();
+    }
+
     /**
      * 创建聊天消息组件
      */
@@ -146,6 +368,9 @@ export class ChatUI {
                                 </button>
                                 <button class="delete-message-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="删除消息">
                                     <i class="fas fa-trash-alt text-sm"></i>
+                                </button>
+                                <button class="retry-from-here-btn p-1 rounded transition-all transform active:scale-95 message-action-btn" title="从这里重发(重置上下文)">
+                                    <i class="fas fa-redo text-sm"></i>
                                 </button>
                             </div>
                         </div>
@@ -907,7 +1132,10 @@ export class ChatUI {
      * 发送消息
      */
     async sendMessage() {
-        if (!this.messageInput || !this.messageInput.value.trim()) return;
+        // 允许仅发送图片（当有 pendingImages 时）
+        const hasText = !!(this.messageInput && this.messageInput.value.trim());
+        const hasImages = Array.isArray(this.pendingImages) && this.pendingImages.length > 0;
+        if (!hasText && !hasImages) return;
         
         // 检查是否正在生成
         if (this.isGenerating) return;
@@ -929,7 +1157,17 @@ export class ChatUI {
         }
         
         // 获取用户消息内容
-        const userMessage = this.messageInput.value.trim();
+        let userMessage = (this.messageInput?.value || '').trim();
+        // 若仅有图片无文本，给一个占位提示，避免 UI 空消息
+        if (!userMessage && hasImages) {
+            userMessage = '【图片】';
+        }
+        // 将选择的图片以 Markdown 内联到文本底部用于前端回显
+        if (hasImages) {
+            // 将展示宽度限制为 240px，使用 HTML img 以便控制大小
+            const md = this.pendingImages.map((img) => `<img src="${img.dataUrl}" alt="image" style="max-width:240px;max-height:240px;height:auto;border-radius:6px;object-fit:contain;" />`).join('\n');
+            userMessage = userMessage ? `${userMessage}\n\n${md}` : md;
+        }
         
         // 清空输入框
         this.messageInput.value = '';
@@ -937,6 +1175,7 @@ export class ChatUI {
         // 重置输入框高度
         this.messageInput.style.height = '40px';
         this.adjustTextareaHeight();
+        // 预览清空由发送后再清理，避免中途出错丢失
         
         // 检查上下文状态，如果上下文已关闭，在用户消息前添加断点标记
         const contextEnabled = this.settingsManager.get('contextEnabled');
@@ -995,8 +1234,9 @@ export class ChatUI {
         // 强制滚动到底部，确保用户消息可见
         this.scrollToBottom(true);
         
-        // 保存消息到当前对话 - 这里只添加用户消息
-        const userMsg = this.conversationManager.addMessage('user', userMessage);
+        // 保存消息到当前对话 - 附带图片 metadata（dataURL 列表）
+        const metadata = hasImages ? { images: this.pendingImages.map(p => ({ name: p.name, type: p.type, dataUrl: p.dataUrl })) } : '';
+        const userMsg = this.conversationManager.addMessage('user', userMessage, metadata);
         
         // 记录用户消息索引便于后续更新
         const userIndex = this.conversationManager.getCurrentConversation().messages.length - 1;
@@ -1153,6 +1393,18 @@ export class ChatUI {
                         assistantIndex = currentMessages.length - 1;
                     }
                     
+                    // 如果是纯JSON，转为代码块格式渲染，便于预览
+                    const formatted = this.tryFormatJsonAsCodeBlock(finalContent);
+                    if (formatted) {
+                        // 更新UI内容
+                        const contentDiv = document.getElementById(`content-${assistantId}`);
+                        if (contentDiv) {
+                            contentDiv.innerHTML = this.ChatMessageComponent.formatter.formatMessage(formatted);
+                        }
+                        // 更新会话存储
+                        currentMessages[assistantIndex].content = formatted;
+                    }
+                    
                     // 确保内容被保存到localStorage
                     this.conversationManager.saveConversations();
                     
@@ -1301,7 +1553,8 @@ export class ChatUI {
                 )
                 .map(msg => ({
                     role: msg.role,
-                    content: msg.content
+                    content: msg.content,
+                    metadata: msg.metadata
                 }));
             
             // 确保最后添加的用户消息也包含在内
@@ -1340,6 +1593,10 @@ export class ChatUI {
             this.sendButton.style.display = 'flex';
             this.enableInput();
         }
+        // 无论成功失败，发送尝试完成后清空待发图片
+        this.clearPendingImages();
+        // 清空文件输入，避免保留上次选择
+        if (this.imageFileInput) this.imageFileInput.value = '';
     }
     
     /**
@@ -1875,5 +2132,24 @@ export class ChatUI {
                     }
                 }
         });
+    }
+
+    /**
+     * 若内容是纯 JSON，则返回格式化后的 ```json 代码块，否则返回空字符串
+     */
+    tryFormatJsonAsCodeBlock(text) {
+        if (!text) return '';
+        const trimmed = text.trim();
+        // 简单判断：以 { 或 [ 开始，且以 } 或 ] 结束
+        if (!((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']')))) {
+            return '';
+        }
+        try {
+            const obj = JSON.parse(trimmed);
+            const pretty = JSON.stringify(obj, null, 2);
+            return '```json\n' + pretty + '\n```';
+        } catch {
+            return '';
+        }
     }
 } 

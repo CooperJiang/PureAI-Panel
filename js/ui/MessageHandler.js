@@ -311,6 +311,7 @@ export class MessageHandler {
         removeOldListeners('.edit-message-btn');
         removeOldListeners('.copy-message-btn');
         removeOldListeners('.delete-message-btn');
+        removeOldListeners('.retry-from-here-btn');
         
         // 重新绑定编辑按钮事件
         const editButtons = this.chatMessages.querySelectorAll('.edit-message-btn');
@@ -415,7 +416,46 @@ export class MessageHandler {
                 this.onDeleteMessage(index);
             });
         });
-        
+
+        // 绑定“从这里重发”按钮
+        const retryButtons = this.chatMessages.querySelectorAll('.retry-from-here-btn');
+        retryButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const messageElement = button.closest('.chat');
+                if (!messageElement || !messageElement.dataset.index) return;
+                const index = parseInt(messageElement.dataset.index);
+                if (isNaN(index)) return;
+
+                // 仅允许在“用户消息”上使用该功能
+                const isUser = messageElement.classList.contains('chat-end');
+                if (!isUser) return;
+
+                // 将断点设在该用户消息之后
+                try {
+                    const conv = this.conversationManager.getCurrentConversation();
+                    if (!conv) return;
+                    // 设置断点位置 = 该消息索引 + 1
+                    if (!Array.isArray(conv.breakpoints)) conv.breakpoints = [];
+                    const breakpointIndex = index + 1;
+                    if (!conv.breakpoints.includes(breakpointIndex)) {
+                        conv.breakpoints.push(breakpointIndex);
+                        conv.breakpoints.sort((a, b) => a - b);
+                    }
+                    this.conversationManager.saveConversations();
+                } catch {}
+
+                // 触发重新发送（使用该条消息内容作为当前输入）
+                const content = messageElement.dataset.content || '';
+                const chatUI = /** @type {any} */ (window.chatUI);
+                if (chatUI && chatUI.messageInput) {
+                    chatUI.messageInput.value = content;
+                    chatUI.adjustTextareaHeight && chatUI.adjustTextareaHeight();
+                    chatUI.sendMessage && chatUI.sendMessage();
+                }
+            });
+        });
     }
     
     /**

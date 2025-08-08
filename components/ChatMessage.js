@@ -77,6 +77,9 @@ export class ChatMessageComponent {
                     <button class="copy-message-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="复制内容">
                         <i class="fas fa-copy"></i>
                     </button>
+                    <button class="retry-from-here-btn p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="从这里重发(重置上下文)">
+                        <i class="fas fa-redo"></i>
+                    </button>
                 </div>
             </div>
         `;

@@ -187,6 +187,17 @@
             <!-- 输入区域 -->
             <div class="input-container">
                 <div class="max-w-3xl mx-auto">
+                    <!-- 工具栏：图片上传 -->
+                    <div id="inputToolbar" class="flex items-center gap-2 mb-2">
+                        <button id="imageUploadBtn" class="btn-action group" title="上传图片(可多选)">
+                            <div class="btn-action-content">
+                                <i class="fas fa-image text-sm group-hover:text-primary dark:group-hover:text-primary transition-colors"></i>
+                            </div>
+                        </button>
+                        <input id="imageFileInput" type="file" accept="image/*" multiple class="hidden" />
+                    </div>
+                    <!-- 图片预览容器 -->
+                    <div id="imagePreviewContainer" class="flex flex-wrap gap-2 mb-2"></div>
                     <div class="relative rounded-lg shadow-sm">
                         <textarea 
                             id="messageInput" 

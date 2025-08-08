@@ -205,7 +205,9 @@
 /* 图片样式 */
 .markdown-content img {
     max-width: 500px;
+    max-height: 320px;
     height: auto;
+    object-fit: contain;
     border-radius: 6px;
     margin: 1.2rem 0;
     cursor: pointer;
@@ -222,6 +224,7 @@
 @media (max-width: 768px) {
     .markdown-content img {
         max-width: 100%;
+        max-height: 240px;
     }
 }
 

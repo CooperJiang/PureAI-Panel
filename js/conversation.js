@@ -419,7 +419,7 @@ export class ConversationManager {
     }
     
     // 向当前对话添加消息
-    addMessage(role, content, metadata = '') {
+    addMessage(role, content, metadata = null) {
         const conversation = this.getCurrentConversation();
         const message = {
             id: 'msg-' + Date.now(),

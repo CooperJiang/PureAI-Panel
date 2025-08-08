@@ -10,8 +10,8 @@ export class MessageFormatter {
         this.toast = new Toast();
         this.htmlPreview = new HtmlPreview();
         
-        // 图片链接匹配正则表达式
-        this.imagePattern = /!\[(.*?)\]\((https?:\/\/.*?\.(png|jpg|jpeg|gif|webp))\)/gi;
+        // 图片链接匹配正则表达式（支持 http/https 与 data URL）
+        this.imagePattern = /!\[(.*?)\]\(((?:https?:\/\/.*?\.(?:png|jpg|jpeg|gif|webp))|(?:data:image\/[a-zA-Z0-9.+-]+;base64,[^\)]+))\)/gi;
     }
     
     /**
@@ -119,7 +119,7 @@ export class MessageFormatter {
     // 格式化图片链接
     formatImageLinks(message) {
         return message.replace(this.imagePattern, (match, altText, url) => {
-            return `<img src="${url}" alt="${altText || '图片'}" class="max-w-[520px]" loading="lazy">`;
+            return `<img src="${url}" alt="${altText || '图片'}" class="max-w-[240px] max-h-[240px] object-contain rounded-md" loading="lazy">`;
         });
     }
     
